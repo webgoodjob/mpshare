@@ -13,21 +13,21 @@
                 extend: {
                     colors: {
                         cyber: {
-                            bg: '#0a0e17',
-                            card: '#121824',
-                            border: '#1f293d',
+                            bg: '#080c14',
+                            card: '#0f172a',
+                            border: '#1e293b',
                             cyan: '#00f3ff',
-                            green: '#39ff14',
-                            red: '#ff2a6d',
-                            yellow: '#ffe600',
-                            text: '#e0e6ed',
-                            subtext: '#8a99ad'
+                            green: '#10b981',
+                            red: '#ef4444',
+                            yellow: '#f59e0b',
+                            text: '#f1f5f9',
+                            subtext: '#94a3b8'
                         }
                     },
                     boxShadow: {
-                        'neon-cyan': '0 0 15px rgba(0, 243, 255, 0.35)',
-                        'neon-green': '0 0 15px rgba(57, 255, 20, 0.35)',
-                        'neon-red': '0 0 15px rgba(255, 42, 109, 0.35)',
+                        'neon-cyan': '0 0 15px rgba(0, 243, 255, 0.3)',
+                        'neon-green': '0 0 15px rgba(16, 185, 129, 0.3)',
+                        'neon-red': '0 0 15px rgba(239, 68, 68, 0.3)',
                     }
                 }
             }
@@ -43,22 +43,28 @@
 
     <style>
         body {
-            background-color: #0a0e17;
-            color: #e0e6ed;
+            background-color: #080c14;
+            color: #f1f5f9;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            overflow-x: hidden;
+            overflow: hidden;
+        }
+
+        #map-container {
+            position: relative;
+            height: 100vh;
+            width: 100vw;
         }
 
         #map {
-            height: 100vh;
-            width: 100vw;
+            height: 100%;
+            width: 100%;
             z-index: 1;
-            background-color: #0a0e17;
+            background-color: #080c14;
         }
 
-        /* 將淺色地圖圖層過濾為賽博朋克高對比暗色調 */
+        /* 濾鏡轉換為暗色賽博風格 */
         .dark-tiles-filter {
-            filter: brightness(0.65) invert(1) contrast(2.0) hue-rotate(200deg) saturate(0.4) brightness(0.9);
+            filter: brightness(0.65) invert(1) contrast(1.8) hue-rotate(200deg) saturate(0.3) brightness(0.85);
         }
 
         .user-location-marker {
@@ -69,10 +75,10 @@
         
         .pulse-ring {
             position: absolute;
-            width: 38px;
-            height: 38px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
-            background-color: rgba(0, 243, 255, 0.2);
+            background-color: rgba(0, 243, 255, 0.25);
             border: 2px solid #00f3ff;
             animation: pulse-animation 2s infinite;
         }
@@ -89,11 +95,11 @@
 
         .target-pulse-ring {
             position: absolute;
-            width: 38px;
-            height: 38px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
-            background-color: rgba(57, 255, 20, 0.2);
-            border: 2px solid #39ff14;
+            background-color: rgba(16, 185, 129, 0.25);
+            border: 2px solid #10b981;
             animation: pulse-animation 2s infinite;
         }
 
@@ -101,8 +107,8 @@
             width: 14px;
             height: 14px;
             border-radius: 50%;
-            background-color: #39ff14;
-            box-shadow: 0 0 12px #39ff14, 0 0 24px #39ff14;
+            background-color: #10b981;
+            box-shadow: 0 0 12px #10b981, 0 0 24px #10b981;
             border: 2px solid #ffffff;
             z-index: 10;
         }
@@ -113,22 +119,37 @@
         }
 
         .leaflet-control-attribution {
-            background: rgba(10, 14, 23, 0.85) !important;
-            color: #8a99ad !important;
+            background: rgba(8, 12, 20, 0.85) !important;
+            color: #94a3b8 !important;
             font-size: 10px;
         }
         .leaflet-control-attribution a {
             color: #00f3ff !important;
         }
+
+        /* 備用 Canvas 向量地圖 */
+        #canvas-map {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            background: radial-gradient(circle at center, #0f172a 0%, #080c14 100%);
+        }
     </style>
 </head>
-<body class="relative min-h-screen flex flex-col justify-between select-none">
+<body class="relative min-h-screen select-none">
 
-    <!-- 地圖圖層容器 -->
-    <div id="map"></div>
+    <div id="map-container">
+        <!-- 備用 Canvas 向量網格地圖 -->
+        <canvas id="canvas-map"></canvas>
+
+        <!-- Leaflet 地圖容器 -->
+        <div id="map"></div>
+    </div>
 
     <!-- 頂部標題與狀態列 -->
-    <header class="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
+    <header class="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
         <div class="bg-cyber-card/90 backdrop-blur-md border border-cyber-border px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-3 pointer-events-auto">
             <div class="relative flex items-center justify-center">
                 <span id="status-dot-ping" class="absolute inline-flex h-3 w-3 rounded-full bg-cyber-yellow opacity-75 animate-ping"></span>
@@ -139,7 +160,7 @@
                     CYBER<span class="text-cyber-cyan">TRACK</span>
                     <span id="mode-badge" class="text-[10px] bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/30 px-1.5 py-0.5 rounded font-mono">定位主機</span>
                 </h1>
-                <p id="system-status-text" class="text-[11px] text-cyber-subtext">正在向瀏覽器請求 GPS 權限...</p>
+                <p id="system-status-text" class="text-[11px] text-cyber-subtext">初始化定位服務中...</p>
             </div>
         </div>
 
@@ -150,25 +171,8 @@
         </div>
     </header>
 
-    <!-- GPS 權限提醒面板 -->
-    <div id="gps-warning-banner" class="hidden absolute top-20 left-4 right-4 z-20 max-w-lg mx-auto bg-cyber-card/95 border border-cyber-yellow/60 rounded-2xl p-4 shadow-xl backdrop-blur-md pointer-events-auto">
-        <div class="flex items-start gap-3">
-            <div class="p-2 bg-cyber-yellow/10 border border-cyber-yellow/30 rounded-xl text-cyber-yellow shrink-0">
-                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
-            </div>
-            <div class="space-y-1.5 text-xs text-cyber-subtext">
-                <h4 class="font-bold text-cyber-yellow text-sm">未能存取實體 GPS 權限</h4>
-                <p id="gps-error-reason" class="text-cyber-text">瀏覽器阻止存取定位權限，或目前地位於 HTTP 非安全環境。</p>
-                <div class="bg-cyber-bg p-2.5 rounded-lg border border-cyber-border text-[11px] space-y-1 mt-2">
-                    <p class="text-cyber-cyan font-semibold">💡 系統已自動啟用：模擬動態定位</p>
-                    <p class="text-cyber-subtext">您仍可以正常測試「產生單次分享追蹤連結」功能。</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- 發起者儀表板 (Owner HUD) -->
-    <div id="owner-hud" class="absolute bottom-4 left-4 right-4 z-10 flex flex-col gap-3 pointer-events-none max-w-lg mx-auto">
+    <div id="owner-hud" class="absolute bottom-4 left-4 right-4 z-20 flex flex-col gap-3 pointer-events-none max-w-lg mx-auto">
         <div class="bg-cyber-card/90 backdrop-blur-md border border-cyber-border p-4 rounded-2xl shadow-xl pointer-events-auto">
             <div class="grid grid-cols-2 gap-3 text-xs">
                 <div class="bg-cyber-bg/60 p-2.5 rounded-xl border border-cyber-border/50">
@@ -207,14 +211,14 @@
     </div>
 
     <!-- 追蹤者視角儀表板 (Viewer HUD) -->
-    <div id="viewer-hud" class="hidden absolute bottom-4 left-4 right-4 z-10 flex-col gap-3 pointer-events-none max-w-lg mx-auto">
+    <div id="viewer-hud" class="hidden absolute bottom-4 left-4 right-4 z-20 flex-col gap-3 pointer-events-none max-w-lg mx-auto">
         <div class="bg-cyber-card/95 backdrop-blur-md border border-cyber-green/40 p-4 rounded-2xl shadow-xl pointer-events-auto">
             <div class="flex items-center justify-between mb-3 border-b border-cyber-border pb-2">
                 <div class="flex items-center gap-2">
                     <i data-lucide="eye" class="w-4 h-4 text-cyber-green animate-pulse"></i>
                     <span class="text-xs font-bold text-cyber-green tracking-wider uppercase">單次授權追蹤視角</span>
                 </div>
-                <span class="text-[10px] bg-cyber-green/20 text-cyber-green border border-cyber-green/30 px-2 py-0.5 rounded-full font-mono">已成功存取</span>
+                <span class="text-[10px] bg-cyber-green/20 text-cyber-green border border-cyber-green/30 px-2 py-0.5 rounded-full font-mono">已驗證成功</span>
             </div>
             
             <div class="grid grid-cols-2 gap-3 text-xs mb-3">
@@ -234,7 +238,7 @@
 
             <p class="text-[11px] text-cyber-subtext bg-cyber-bg/80 p-2.5 rounded-xl border border-cyber-border/40 flex items-start gap-2">
                 <i data-lucide="shield-check" class="w-4 h-4 text-cyber-green shrink-0 mt-0.5"></i>
-                <span>此單次憑證已在本機驗證並銷毀。若重新整理頁面或再次存取此網址，將直接視為權限失效。</span>
+                <span>此單次安全金鑰已成功開鎖並銷毀。若重新整理頁面或再次開啟此網址，將直接提示憑證過期。</span>
             </p>
         </div>
     </div>
@@ -252,7 +256,7 @@
                 </div>
                 <div>
                     <h3 class="text-base font-bold text-cyber-text">單次安全連結已生成</h3>
-                    <p class="text-xs text-cyber-subtext">僅限第一個點開連結的人讀取您的位置</p>
+                    <p class="text-xs text-cyber-subtext">僅限第一個開啟連結的人檢視位置與地圖標記</p>
                 </div>
             </div>
 
@@ -267,38 +271,31 @@
 
                 <div class="p-3 bg-cyber-cyan/5 border border-cyber-cyan/20 rounded-xl space-y-1 text-xs text-cyber-subtext">
                     <div class="flex items-center gap-1.5 text-cyber-cyan font-semibold">
-                        <i data-lucide="shield" class="w-4 h-4"></i> 單次存取原則：
+                        <i data-lucide="shield" class="w-4 h-4"></i> 單次開啟銷毀機制：
                     </div>
                     <ul class="list-disc list-inside space-y-1 text-[11px] text-cyber-subtext pl-1">
-                        <li>第一個開啟連結者成功解鎖後，該 Token 會被註記銷毀。</li>
-                        <li>重複開啟、重新整理頁面或他人開啟均會跳出「連結失效」警告。</li>
+                        <li>對方點開後即可解鎖看到當前位置數據。</li>
+                        <li>只要刷新網頁或第二個人開啟，系統將直接封鎖並顯示權限銷毀。</li>
                     </ul>
                 </div>
-            </div>
-
-            <div class="flex gap-2">
-                <button id="stop-share-btn" class="w-full bg-cyber-red/10 hover:bg-cyber-red/20 border border-cyber-red/40 text-cyber-red font-bold py-2.5 rounded-xl transition text-xs flex items-center justify-center gap-1.5">
-                    <i data-lucide="stop-circle" class="w-4 h-4"></i>
-                    <span>撤銷並銷毀此分享連結</span>
-                </button>
             </div>
         </div>
     </div>
 
-    <!-- 連結已失效 Modal -->
-    <div id="expired-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <!-- 連結已失效 Full Screen Modal -->
+    <div id="expired-modal" class="fixed inset-0 z-50 bg-cyber-bg/95 backdrop-blur-md hidden flex items-center justify-center p-4">
         <div class="bg-cyber-card border border-cyber-red/50 rounded-2xl p-6 max-w-sm w-full shadow-neon-red text-center space-y-4">
             <div class="w-14 h-14 bg-cyber-red/10 border border-cyber-red/30 rounded-full flex items-center justify-center mx-auto text-cyber-red">
                 <i data-lucide="shield-x" class="w-8 h-8"></i>
             </div>
             <div>
-                <h3 class="text-lg font-bold text-cyber-text mb-1">⛔ 此單次分享連結已被開啟使用，無法再次讀取！</h3>
+                <h3 class="text-base font-bold text-cyber-red mb-1">⛔ 此單次分享連結已被讀取使用過，權限已自動銷毀！</h3>
                 <p class="text-xs text-cyber-subtext leading-relaxed">
-                    為保護使用者隱私，該連結包含的「單次檢視權限」已經被開啟過並被銷毀。基於安全保護機制已拒絕存取。
+                    基於安全與隱私機制，這組單次安全金鑰已經被開啟存取過一次。系統已自動鎖定並拒絕再次存取。
                 </p>
             </div>
             <button onclick="window.location.href = window.location.pathname" class="w-full bg-cyber-card hover:bg-cyber-border border border-cyber-border text-cyber-text font-bold py-2.5 rounded-xl transition text-xs">
-                回到我的定位主頁
+                返回我的定位主頁
             </button>
         </div>
     </div>
@@ -313,14 +310,24 @@
         lucide.createIcons();
 
         let map, userMarker, targetMarker, accuracyCircle;
-        let watchId = null;
-        let activeShareToken = null;
         let isViewerMode = false;
         let userPos = { lat: 24.147736, lng: 120.673648, accuracy: 15, speed: "0.0", updated: "--:--:--" };
 
-        // 使用高穩定度、無 403 / API Key 限制的 CartoDB Voyager 圖層
-        const PRIMARY_TILE = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-        const FALLBACK_TILE = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
+        // 1. 三重地圖瓦片備援圖層
+        const TILE_LAYERS = [
+            {
+                url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                options: { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19, crossOrigin: true }
+            },
+            {
+                url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+                options: { attribution: '&copy; Esri, ArcGIS', maxZoom: 19 }
+            },
+            {
+                url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                options: { attribution: '&copy; CARTO', maxZoom: 19, subdomains: 'abcd' }
+            }
+        ];
 
         const hudCoords = document.getElementById('hud-coords');
         const hudAccuracy = document.getElementById('hud-accuracy');
@@ -340,7 +347,6 @@
         const shareModal = document.getElementById('share-modal');
         const expiredModal = document.getElementById('expired-modal');
         const shareUrlInput = document.getElementById('share-url-input');
-        const gpsWarningBanner = document.getElementById('gps-warning-banner');
 
         function showToast(message, duration = 3000) {
             const toast = document.getElementById('toast');
@@ -354,33 +360,66 @@
             }, duration);
         }
 
-        // 初始化 Leaflet 地圖並設定彈性備援機制
+        // 繪製科技感 Canvas 備用背景（確保絕無破圖或空白）
+        function drawCanvasFallbackMap() {
+            const canvas = document.getElementById('canvas-map');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'rgba(0, 243, 255, 0.08)';
+            ctx.lineWidth = 1;
+
+            const gridSize = 40;
+            for (let x = 0; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+
+        // 初始化 Leaflet 地圖（帶多重備援與科技濾鏡）
         function initMap() {
-            const defaultPos = [24.147736, 120.673648]; // 預設台中市
+            drawCanvasFallbackMap();
+            window.addEventListener('resize', drawCanvasFallbackMap);
+
+            const defaultPos = [24.147736, 120.673648];
             map = L.map('map', {
                 center: defaultPos,
                 zoom: 16,
                 zoomControl: false
             });
 
-            const mainLayer = L.tileLayer(PRIMARY_TILE, {
-                attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://openstreetmap.org">OpenStreetMap</a>',
-                maxZoom: 19,
-                subdomains: 'abcd',
-                className: 'dark-tiles-filter'
-            });
+            let layerIndex = 0;
 
-            mainLayer.on('tileerror', function() {
-                console.warn('備用機制觸發：切換至次要圖層...');
-                map.removeLayer(mainLayer);
-                L.tileLayer(FALLBACK_TILE, {
-                    attribution: '&copy; Esri, ArcGIS',
-                    maxZoom: 19,
-                    className: 'dark-tiles-filter'
-                }).addTo(map);
-            });
+            function loadTileLayer(index) {
+                if (index >= TILE_LAYERS.length) {
+                    console.warn("瓦片地圖皆無法存取，使用備用 Canvas 向量網格圖");
+                    document.getElementById('map').style.backgroundColor = 'transparent';
+                    return;
+                }
 
-            mainLayer.addTo(map);
+                const conf = TILE_LAYERS[index];
+                const layer = L.tileLayer(conf.url, { ...conf.options, className: 'dark-tiles-filter' });
+
+                layer.on('tileerror', () => {
+                    console.warn(`圖層 ${index + 1} 載入失敗，切換下一個...`);
+                    map.removeLayer(layer);
+                    loadTileLayer(index + 1);
+                });
+
+                layer.addTo(map);
+            }
+
+            loadTileLayer(layerIndex);
             L.control.zoom({ position: 'bottomright' }).addTo(map);
         }
 
@@ -388,8 +427,8 @@
             const customIcon = L.divIcon({
                 className: 'user-location-marker',
                 html: `<div class="pulse-ring"></div><div class="pulse-core"></div>`,
-                iconSize: [38, 38],
-                iconAnchor: [19, 19]
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
             });
 
             if (!userMarker) {
@@ -403,8 +442,8 @@
             const customIcon = L.divIcon({
                 className: 'user-location-marker',
                 html: `<div class="target-pulse-ring"></div><div class="target-pulse-core"></div>`,
-                iconSize: [38, 38],
-                iconAnchor: [19, 19]
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
             });
 
             if (!targetMarker) {
@@ -430,19 +469,17 @@
             }
         }
 
-        // 啟動 GPS 追蹤機制
+        // GPS 定位與備援模擬機制
         function startGeolocationTracking() {
             if (!navigator.geolocation) {
-                gpsWarningBanner.classList.remove('hidden');
-                useFallbackLocation();
+                useFallbackLocation("設備不支援實體 GPS");
                 return;
             }
 
-            statusText.innerText = "嘗試存取實體 GPS 中...";
+            statusText.innerText = "讀取 GPS 權限中...";
 
-            watchId = navigator.geolocation.watchPosition(
+            navigator.geolocation.watchPosition(
                 (position) => {
-                    gpsWarningBanner.classList.add('hidden');
                     const { latitude, longitude, accuracy, speed } = position.coords;
                     const timestamp = new Date(position.timestamp);
 
@@ -459,7 +496,7 @@
                     hudSpeed.innerText = `${userPos.speed} km/h`;
                     hudUpdated.innerText = userPos.updated;
 
-                    statusText.innerText = "高精度 GPS 定位中";
+                    statusText.innerText = "高精度 GPS 即時定位";
                     statusDot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-cyber-green";
                     statusDotPing.className = "absolute inline-flex h-3 w-3 rounded-full bg-cyber-green opacity-75 animate-ping";
 
@@ -472,49 +509,44 @@
                     }
                 },
                 (error) => {
-                    gpsWarningBanner.classList.remove('hidden');
-                    statusText.innerText = "已啟動模擬動態定位";
-                    useFallbackLocation();
+                    useFallbackLocation("已啟動展示模擬定位");
                 },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0
-                }
+                { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
             );
         }
 
-        // 定位失敗時啟動模擬展示定位 (Simulated Movement)
-        function useFallbackLocation() {
+        // 模擬 GPS 定位備援
+        function useFallbackLocation(reasonText) {
             if (window._fallbackStarted) return;
             window._fallbackStarted = true;
 
             let mockLat = 24.147736;
             let mockLng = 120.673648;
 
-            statusDot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-cyber-cyan";
-            statusDotPing.className = "absolute inline-flex h-3 w-3 rounded-full bg-cyber-cyan opacity-75 animate-ping";
+            statusText.innerText = reasonText;
+            statusDot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-cyber-yellow";
+            statusDotPing.className = "absolute inline-flex h-3 w-3 rounded-full bg-cyber-yellow opacity-75 animate-ping";
 
             setInterval(() => {
-                mockLat += (Math.random() - 0.5) * 0.00015;
-                mockLng += (Math.random() - 0.5) * 0.00015;
+                mockLat += (Math.random() - 0.5) * 0.00012;
+                mockLng += (Math.random() - 0.5) * 0.00012;
                 const now = new Date().toLocaleTimeString();
 
                 userPos = {
                     lat: mockLat,
                     lng: mockLng,
-                    accuracy: 12,
-                    speed: (Math.random() * 3 + 1).toFixed(1),
+                    accuracy: 10,
+                    speed: (Math.random() * 2 + 1).toFixed(1),
                     updated: now
                 };
 
                 hudCoords.innerText = `${mockLat.toFixed(6)}, ${mockLng.toFixed(6)}`;
-                hudAccuracy.innerText = `12 m (模擬)`;
+                hudAccuracy.innerText = `10 m (模擬)`;
                 hudSpeed.innerText = `${userPos.speed} km/h`;
                 hudUpdated.innerText = now;
 
                 createUserMarker(mockLat, mockLng);
-                updateAccuracyCircle(mockLat, mockLng, 12);
+                updateAccuracyCircle(mockLat, mockLng, 10);
 
                 if (!map._userCentered) {
                     map.setView([mockLat, mockLng], 17);
@@ -523,64 +555,52 @@
             }, 3000);
         }
 
-        // 產生單次分享連結 (Single-Use Payload URL)
+        // 建立單次加密分享 URL (URL Hash Base64 Payload)
         function createSingleUseShareLink() {
-            activeShareToken = 'token_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+            const tokenId = 'tok_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 
-            // 將發起者當前定位與 Token 打包為 Base64 Payload 放在 URL Hash 中
             const payload = {
-                t: activeShareToken,
+                id: tokenId,
                 lat: userPos.lat,
                 lng: userPos.lng,
                 acc: userPos.accuracy,
                 time: userPos.updated || new Date().toLocaleTimeString()
             };
 
-            const encodedPayload = btoa(JSON.stringify(payload));
-            const shareUrl = `${window.location.origin}${window.location.pathname}#share?p=${encodedPayload}`;
+            const encodedData = btoa(JSON.stringify(payload));
+            const shareUrl = `${window.location.origin}${window.location.pathname}#data=${encodedData}`;
 
             shareUrlInput.value = shareUrl;
             shareModal.classList.remove('hidden');
-
-            // 記錄主機防撤銷權限狀態
-            localStorage.setItem(`cyber_active_${activeShareToken}`, 'true');
-            showToast("單次安全連結已成功建立！");
+            showToast("單次安全連結已成功生成！");
         }
 
-        function stopSharing() {
-            if (activeShareToken) {
-                localStorage.removeItem(`cyber_active_${activeShareToken}`);
-            }
-            activeShareToken = null;
-            shareModal.classList.add('hidden');
-            showToast("已銷毀該分享連結與權限");
-        }
-
-        // 檢視者視角初始化 (Viewer Mode with Strict One-Time Enforcement)
-        function initViewerMode(encodedPayload) {
+        // 追蹤者模式：解碼與單次開啟鎖定檢查
+        function initViewerMode(encodedData) {
             isViewerMode = true;
 
-            ownerHud.classList.add('hidden');
-            viewerHud.classList.remove('hidden');
-            modeBadge.innerText = "單次追蹤視角";
-            modeBadge.className = "text-[10px] bg-cyber-green/10 text-cyber-green border border-cyber-green/30 px-1.5 py-0.5 rounded font-mono";
-
             try {
-                const payload = JSON.parse(atob(encodedPayload));
-                const token = payload.t;
-                const storageKey = `cyber_consumed_${token}`;
+                const payload = JSON.parse(atob(encodedData));
+                const tokenId = payload.id;
+                const storageKey = `cyber_token_used_${tokenId}`;
 
-                // 【單次存取核心判斷】：檢查該 Token 是否已經在本機/瀏覽器視窗中開啟使用過
+                // 【單次存取核心判定】
                 if (localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey)) {
                     showExpiredModal();
                     return;
                 }
 
-                // 標記該 Token 已被存取使用（防重新整理 / 防二次開啟）
+                // 註記此 Token 已使用（再次刷新或點開即失效）
                 localStorage.setItem(storageKey, 'true');
                 sessionStorage.setItem(storageKey, 'true');
 
-                statusText.innerText = "單次驗證通過 - 已呈現定位數據";
+                // 顯示檢視模式介面
+                ownerHud.classList.add('hidden');
+                viewerHud.classList.remove('hidden');
+                modeBadge.innerText = "單次追蹤視角";
+                modeBadge.className = "text-[10px] bg-cyber-green/10 text-cyber-green border border-cyber-green/30 px-1.5 py-0.5 rounded font-mono";
+
+                statusText.innerText = "單次金鑰開鎖成功";
                 statusDot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-cyber-green";
                 statusDotPing.className = "absolute inline-flex h-3 w-3 rounded-full bg-cyber-green opacity-75 animate-ping";
 
@@ -591,20 +611,21 @@
                 map.setView([payload.lat, payload.lng], 17);
 
             } catch (err) {
-                console.error("無效或毀損的憑證數據", err);
+                console.error("解密資料失敗", err);
                 showExpiredModal();
             }
         }
 
         function showExpiredModal() {
             expiredModal.classList.remove('hidden');
+            document.getElementById('map-container').style.display = 'none';
         }
 
-        // 事件監聽綁定
+        // 按鈕觸發事件
         document.getElementById('recenter-btn').addEventListener('click', () => {
             if (isViewerMode && targetMarker) {
                 map.setView(targetMarker.getLatLng(), 17);
-                showToast("已對焦至分享目標位置");
+                showToast("已對焦至目標位置");
             } else if (userPos && userPos.lat) {
                 map.setView([userPos.lat, userPos.lng], 17);
                 showToast("已對焦至我的位置");
@@ -613,7 +634,6 @@
 
         document.getElementById('create-share-btn').addEventListener('click', createSingleUseShareLink);
         document.getElementById('close-modal-btn').addEventListener('click', () => shareModal.classList.add('hidden'));
-        document.getElementById('stop-share-btn').addEventListener('click', stopSharing);
 
         document.getElementById('copy-url-btn').addEventListener('click', () => {
             shareUrlInput.select();
@@ -621,14 +641,14 @@
             showToast("單次分享連結已複製！");
         });
 
-        // 頁面啟動判斷
+        // 頁面載入點
         window.addEventListener('load', () => {
             initMap();
 
             const hash = window.location.hash;
-            if (hash && hash.includes('#share?p=')) {
-                const encodedPayload = hash.split('#share?p=')[1];
-                initViewerMode(encodedPayload);
+            if (hash && hash.includes('#data=')) {
+                const encodedData = hash.split('#data=')[1];
+                initViewerMode(encodedData);
             } else {
                 startGeolocationTracking();
             }
