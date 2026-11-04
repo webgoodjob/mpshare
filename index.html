@@ -56,12 +56,11 @@
             background-color: #0a0e17;
         }
 
-        /* 濾鏡調整：將淺色地圖轉換為極具質感的賽博朋克暗色調 */
+        /* 將淺色地圖圖層過濾為賽博朋克高對比暗色調 */
         .dark-tiles-filter {
-            filter: brightness(0.55) invert(1) contrast(2.2) hue-rotate(200deg) saturate(0.35) brightness(0.85);
+            filter: brightness(0.65) invert(1) contrast(2.0) hue-rotate(200deg) saturate(0.4) brightness(0.9);
         }
 
-        /* 脈衝標籤動畫 */
         .user-location-marker {
             display: flex;
             justify-content: center;
@@ -144,26 +143,25 @@
             </div>
         </div>
 
-        <!-- 功能控制按鈕 -->
         <div class="flex items-center gap-2 pointer-events-auto">
-            <button id="recenter-btn" title="重新對焦我的位置" class="bg-cyber-card/90 hover:bg-cyber-border/80 text-cyber-cyan p-2.5 rounded-xl border border-cyber-border shadow-lg transition active:scale-95 flex items-center justify-center">
+            <button id="recenter-btn" title="重新對焦位置" class="bg-cyber-card/90 hover:bg-cyber-border/80 text-cyber-cyan p-2.5 rounded-xl border border-cyber-border shadow-lg transition active:scale-95 flex items-center justify-center">
                 <i data-lucide="crosshair" class="w-5 h-5"></i>
             </button>
         </div>
     </header>
 
-    <!-- GPS 權限提醒提示框 -->
+    <!-- GPS 權限提醒面板 -->
     <div id="gps-warning-banner" class="hidden absolute top-20 left-4 right-4 z-20 max-w-lg mx-auto bg-cyber-card/95 border border-cyber-yellow/60 rounded-2xl p-4 shadow-xl backdrop-blur-md pointer-events-auto">
         <div class="flex items-start gap-3">
             <div class="p-2 bg-cyber-yellow/10 border border-cyber-yellow/30 rounded-xl text-cyber-yellow shrink-0">
                 <i data-lucide="alert-triangle" class="w-5 h-5"></i>
             </div>
             <div class="space-y-1.5 text-xs text-cyber-subtext">
-                <h4 class="font-bold text-cyber-yellow text-sm">未能取得實體 GPS 定位</h4>
-                <p id="gps-error-reason" class="text-cyber-text">瀏覽器阻止存取定位權限或目前位於非 HTTPS 安全連線環境。</p>
+                <h4 class="font-bold text-cyber-yellow text-sm">未能存取實體 GPS 權限</h4>
+                <p id="gps-error-reason" class="text-cyber-text">瀏覽器阻止存取定位權限，或目前地位於 HTTP 非安全環境。</p>
                 <div class="bg-cyber-bg p-2.5 rounded-lg border border-cyber-border text-[11px] space-y-1 mt-2">
-                    <p class="text-cyber-cyan font-semibold">💡 系統已自動啟用：模擬展示定位模式</p>
-                    <p class="text-cyber-subtext">您仍可以正常測試「產生單次分享追蹤連結」以及即時地圖互動功能。</p>
+                    <p class="text-cyber-cyan font-semibold">💡 系統已自動啟用：模擬動態定位</p>
+                    <p class="text-cyber-subtext">您仍可以正常測試「產生單次分享追蹤連結」功能。</p>
                 </div>
             </div>
         </div>
@@ -202,7 +200,7 @@
             <div class="mt-3.5 pt-3 border-t border-cyber-border/60 flex flex-col gap-2">
                 <button id="create-share-btn" class="w-full bg-cyber-cyan/10 hover:bg-cyber-cyan/20 border border-cyber-cyan/50 text-cyber-cyan font-bold py-2.5 px-4 rounded-xl transition shadow-neon-cyan flex items-center justify-center gap-2 text-sm active:scale-[0.98]">
                     <i data-lucide="share-2" class="w-4 h-4"></i>
-                    <span>產生單次分享追蹤連結</span>
+                    <span>建立單次分享追蹤連結</span>
                 </button>
             </div>
         </div>
@@ -214,21 +212,21 @@
             <div class="flex items-center justify-between mb-3 border-b border-cyber-border pb-2">
                 <div class="flex items-center gap-2">
                     <i data-lucide="eye" class="w-4 h-4 text-cyber-green animate-pulse"></i>
-                    <span class="text-xs font-bold text-cyber-green tracking-wider uppercase">單次授權追蹤模式</span>
+                    <span class="text-xs font-bold text-cyber-green tracking-wider uppercase">單次授權追蹤視角</span>
                 </div>
-                <span class="text-[10px] bg-cyber-green/20 text-cyber-green border border-cyber-green/30 px-2 py-0.5 rounded-full font-mono">即時連線中</span>
+                <span class="text-[10px] bg-cyber-green/20 text-cyber-green border border-cyber-green/30 px-2 py-0.5 rounded-full font-mono">已成功存取</span>
             </div>
             
             <div class="grid grid-cols-2 gap-3 text-xs mb-3">
                 <div class="bg-cyber-bg/60 p-2.5 rounded-xl border border-cyber-border/50">
                     <div class="text-cyber-subtext mb-1 flex items-center gap-1">
-                        <i data-lucide="navigation" class="w-3.5 h-3.5 text-cyber-green"></i> 目標當前座標
+                        <i data-lucide="navigation" class="w-3.5 h-3.5 text-cyber-green"></i> 目標分享座標
                     </div>
-                    <div id="viewer-coords" class="font-mono text-cyber-text font-medium text-sm truncate">同步中...</div>
+                    <div id="viewer-coords" class="font-mono text-cyber-text font-medium text-sm truncate">讀取中...</div>
                 </div>
                 <div class="bg-cyber-bg/60 p-2.5 rounded-xl border border-cyber-border/50">
                     <div class="text-cyber-subtext mb-1 flex items-center gap-1">
-                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-cyber-cyan"></i> 資料更新時間
+                        <i data-lucide="clock" class="w-3.5 h-3.5 text-cyber-cyan"></i> 數據記錄時間
                     </div>
                     <div id="viewer-updated" class="font-mono text-cyber-text font-medium text-sm">--:--:--</div>
                 </div>
@@ -236,7 +234,7 @@
 
             <p class="text-[11px] text-cyber-subtext bg-cyber-bg/80 p-2.5 rounded-xl border border-cyber-border/40 flex items-start gap-2">
                 <i data-lucide="shield-check" class="w-4 h-4 text-cyber-green shrink-0 mt-0.5"></i>
-                <span>此連結已成功解鎖驗證。為保護隱私，該連結已經被關閉，其他人或重新整理頁面均無法再次讀取。</span>
+                <span>此單次憑證已在本機驗證並銷毀。若重新整理頁面或再次存取此網址，將直接視為權限失效。</span>
             </p>
         </div>
     </div>
@@ -254,7 +252,7 @@
                 </div>
                 <div>
                     <h3 class="text-base font-bold text-cyber-text">單次安全連結已生成</h3>
-                    <p class="text-xs text-cyber-subtext">僅限第一個點開連結的人觀看您的即時位置</p>
+                    <p class="text-xs text-cyber-subtext">僅限第一個點開連結的人讀取您的位置</p>
                 </div>
             </div>
 
@@ -272,8 +270,8 @@
                         <i data-lucide="shield" class="w-4 h-4"></i> 單次存取原則：
                     </div>
                     <ul class="list-disc list-inside space-y-1 text-[11px] text-cyber-subtext pl-1">
-                        <li>第一位使用者開啟該網址後，該 Token 隨即銷毀。</li>
-                        <li>其他人或重複重新整理都會直接顯示「連結已失效」。</li>
+                        <li>第一個開啟連結者成功解鎖後，該 Token 會被註記銷毀。</li>
+                        <li>重複開啟、重新整理頁面或他人開啟均會跳出「連結失效」警告。</li>
                     </ul>
                 </div>
             </div>
@@ -281,7 +279,7 @@
             <div class="flex gap-2">
                 <button id="stop-share-btn" class="w-full bg-cyber-red/10 hover:bg-cyber-red/20 border border-cyber-red/40 text-cyber-red font-bold py-2.5 rounded-xl transition text-xs flex items-center justify-center gap-1.5">
                     <i data-lucide="stop-circle" class="w-4 h-4"></i>
-                    <span>主動撤銷權限並關閉分享</span>
+                    <span>撤銷並銷毀此分享連結</span>
                 </button>
             </div>
         </div>
@@ -294,9 +292,9 @@
                 <i data-lucide="shield-x" class="w-8 h-8"></i>
             </div>
             <div>
-                <h3 class="text-lg font-bold text-cyber-text mb-1">分享連結已失效</h3>
+                <h3 class="text-lg font-bold text-cyber-text mb-1">⛔ 此單次分享連結已被開啟使用，無法再次讀取！</h3>
                 <p class="text-xs text-cyber-subtext leading-relaxed">
-                    此「單次分享連結」先前已被開啟存取過或由建立者手動撤銷。基於安全保護機制已拒絕存取。
+                    為保護使用者隱私，該連結包含的「單次檢視權限」已經被開啟過並被銷毀。基於安全保護機制已拒絕存取。
                 </p>
             </div>
             <button onclick="window.location.href = window.location.pathname" class="w-full bg-cyber-card hover:bg-cyber-border border border-cyber-border text-cyber-text font-bold py-2.5 rounded-xl transition text-xs">
@@ -317,13 +315,12 @@
         let map, userMarker, targetMarker, accuracyCircle;
         let watchId = null;
         let activeShareToken = null;
-        let broadcastChannel = null;
         let isViewerMode = false;
-        let userPos = null;
+        let userPos = { lat: 24.147736, lng: 120.673648, accuracy: 15, speed: "0.0", updated: "--:--:--" };
 
-        // 多重備援地圖 Tile Layers（解決 OpenStreetMap / CartoDB 403 Access Blocked 政策問題）
-        const PRIMARY_TILE = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
-        const FALLBACK_TILE = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+        // 使用高穩定度、無 403 / API Key 限制的 CartoDB Voyager 圖層
+        const PRIMARY_TILE = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+        const FALLBACK_TILE = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
 
         const hudCoords = document.getElementById('hud-coords');
         const hudAccuracy = document.getElementById('hud-accuracy');
@@ -359,7 +356,7 @@
 
         // 初始化 Leaflet 地圖並設定彈性備援機制
         function initMap() {
-            const defaultPos = [25.033968, 121.564472]; // 預設：台北 101
+            const defaultPos = [24.147736, 120.673648]; // 預設台中市
             map = L.map('map', {
                 center: defaultPos,
                 zoom: 16,
@@ -367,16 +364,17 @@
             });
 
             const mainLayer = L.tileLayer(PRIMARY_TILE, {
-                attribution: '&copy; Esri, ArcGIS',
+                attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://openstreetmap.org">OpenStreetMap</a>',
                 maxZoom: 19,
+                subdomains: 'abcd',
                 className: 'dark-tiles-filter'
             });
 
             mainLayer.on('tileerror', function() {
-                console.warn('主要圖層載入受阻，自動切換至備援圖層...');
+                console.warn('備用機制觸發：切換至次要圖層...');
                 map.removeLayer(mainLayer);
                 L.tileLayer(FALLBACK_TILE, {
-                    attribution: '&copy; CARTO, OpenStreetMap',
+                    attribution: '&copy; Esri, ArcGIS',
                     maxZoom: 19,
                     className: 'dark-tiles-filter'
                 }).addTo(map);
@@ -472,12 +470,10 @@
                         map.setView([latitude, longitude], 17);
                         map._userCentered = true;
                     }
-
-                    broadcastLocationUpdate();
                 },
                 (error) => {
                     gpsWarningBanner.classList.remove('hidden');
-                    statusText.innerText = "已啟動模擬展示定位";
+                    statusText.innerText = "已啟動模擬動態定位";
                     useFallbackLocation();
                 },
                 {
@@ -488,130 +484,80 @@
             );
         }
 
-        // 定位失敗或無法存取時切換至模擬展示定位
+        // 定位失敗時啟動模擬展示定位 (Simulated Movement)
         function useFallbackLocation() {
             if (window._fallbackStarted) return;
             window._fallbackStarted = true;
 
-            let mockLat = 25.033968;
-            let mockLng = 121.564472;
+            let mockLat = 24.147736;
+            let mockLng = 120.673648;
 
             statusDot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-cyber-cyan";
             statusDotPing.className = "absolute inline-flex h-3 w-3 rounded-full bg-cyber-cyan opacity-75 animate-ping";
 
             setInterval(() => {
-                mockLat += (Math.random() - 0.5) * 0.00012;
-                mockLng += (Math.random() - 0.5) * 0.00012;
+                mockLat += (Math.random() - 0.5) * 0.00015;
+                mockLng += (Math.random() - 0.5) * 0.00015;
                 const now = new Date().toLocaleTimeString();
 
                 userPos = {
                     lat: mockLat,
                     lng: mockLng,
-                    accuracy: 10,
+                    accuracy: 12,
                     speed: (Math.random() * 3 + 1).toFixed(1),
                     updated: now
                 };
 
                 hudCoords.innerText = `${mockLat.toFixed(6)}, ${mockLng.toFixed(6)}`;
-                hudAccuracy.innerText = `10 m (模擬)`;
+                hudAccuracy.innerText = `12 m (模擬)`;
                 hudSpeed.innerText = `${userPos.speed} km/h`;
                 hudUpdated.innerText = now;
 
                 createUserMarker(mockLat, mockLng);
-                updateAccuracyCircle(mockLat, mockLng, 10);
+                updateAccuracyCircle(mockLat, mockLng, 12);
 
                 if (!map._userCentered) {
                     map.setView([mockLat, mockLng], 17);
                     map._userCentered = true;
                 }
-
-                broadcastLocationUpdate();
             }, 3000);
         }
 
-        // 產生單次分享連結 (Single-Use Link Generation)
+        // 產生單次分享連結 (Single-Use Payload URL)
         function createSingleUseShareLink() {
-            activeShareToken = 'tok_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+            activeShareToken = 'token_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
 
-            const url = new URL(window.location.href);
-            url.search = '';
-            url.hash = `track?token=${activeShareToken}`;
+            // 將發起者當前定位與 Token 打包為 Base64 Payload 放在 URL Hash 中
+            const payload = {
+                t: activeShareToken,
+                lat: userPos.lat,
+                lng: userPos.lng,
+                acc: userPos.accuracy,
+                time: userPos.updated || new Date().toLocaleTimeString()
+            };
 
-            shareUrlInput.value = url.toString();
+            const encodedPayload = btoa(JSON.stringify(payload));
+            const shareUrl = `${window.location.origin}${window.location.pathname}#share?p=${encodedPayload}`;
+
+            shareUrlInput.value = shareUrl;
             shareModal.classList.remove('hidden');
 
-            // 寫入本地記錄
-            localStorage.setItem(`cyber_token_${activeShareToken}`, JSON.stringify({
-                created: Date.now(),
-                consumed: false,
-                active: true
-            }));
-
-            setupBroadcastChannel(activeShareToken);
+            // 記錄主機防撤銷權限狀態
+            localStorage.setItem(`cyber_active_${activeShareToken}`, 'true');
             showToast("單次安全連結已成功建立！");
-        }
-
-        function setupBroadcastChannel(token) {
-            if (broadcastChannel) broadcastChannel.close();
-
-            broadcastChannel = new BroadcastChannel(`cyber_channel_${token}`);
-
-            broadcastChannel.onmessage = (event) => {
-                const data = event.data;
-                if (!data) return;
-
-                if (data.type === 'REQUEST_ACCESS') {
-                    const tokenDataStr = localStorage.getItem(`cyber_token_${token}`);
-                    const tokenData = tokenDataStr ? JSON.parse(tokenDataStr) : null;
-
-                    if (tokenData && tokenData.active && !tokenData.consumed) {
-                        tokenData.consumed = true;
-                        localStorage.setItem(`cyber_token_${token}`, JSON.stringify(tokenData));
-
-                        broadcastChannel.postMessage({
-                            type: 'ACCESS_GRANTED',
-                            location: userPos
-                        });
-
-                        showToast("追蹤者已透過單次連結成功連線！");
-                    } else {
-                        broadcastChannel.postMessage({
-                            type: 'ACCESS_DENIED',
-                            reason: 'TOKEN_EXPIRED'
-                        });
-                    }
-                }
-
-                if (data.type === 'POLL_LOCATION') {
-                    broadcastLocationUpdate();
-                }
-            };
-        }
-
-        function broadcastLocationUpdate() {
-            if (broadcastChannel && userPos && activeShareToken) {
-                broadcastChannel.postMessage({
-                    type: 'LOCATION_UPDATE',
-                    location: userPos
-                });
-            }
         }
 
         function stopSharing() {
             if (activeShareToken) {
-                localStorage.removeItem(`cyber_token_${activeShareToken}`);
-                if (broadcastChannel) {
-                    broadcastChannel.postMessage({ type: 'SHARE_REVOKED' });
-                    broadcastChannel.close();
-                }
+                localStorage.removeItem(`cyber_active_${activeShareToken}`);
             }
             activeShareToken = null;
             shareModal.classList.add('hidden');
-            showToast("已停止分享並銷毀連結權限");
+            showToast("已銷毀該分享連結與權限");
         }
 
-        // 追蹤檢視者視角初始化 (Viewer Mode)
-        function initViewerMode(token) {
+        // 檢視者視角初始化 (Viewer Mode with Strict One-Time Enforcement)
+        function initViewerMode(encodedPayload) {
             isViewerMode = true;
 
             ownerHud.classList.add('hidden');
@@ -619,82 +565,47 @@
             modeBadge.innerText = "單次追蹤視角";
             modeBadge.className = "text-[10px] bg-cyber-green/10 text-cyber-green border border-cyber-green/30 px-1.5 py-0.5 rounded font-mono";
 
-            statusText.innerText = "正在進行單次安全金鑰驗證...";
+            try {
+                const payload = JSON.parse(atob(encodedPayload));
+                const token = payload.t;
+                const storageKey = `cyber_consumed_${token}`;
 
-            broadcastChannel = new BroadcastChannel(`cyber_channel_${token}`);
-
-            // 檢查 Token 是否已經被讀取過 (LocalStorage / Session Storage)
-            const sessionConsumedKey = `cyber_consumed_${token}`;
-            if (sessionStorage.getItem(sessionConsumedKey)) {
-                showExpiredModal();
-                return;
-            }
-
-            const tokenDataStr = localStorage.getItem(`cyber_token_${token}`);
-            let tokenData = tokenDataStr ? JSON.parse(tokenDataStr) : null;
-
-            if (tokenData && tokenData.consumed) {
-                showExpiredModal();
-                return;
-            }
-
-            broadcastChannel.onmessage = (event) => {
-                const data = event.data;
-                if (!data) return;
-
-                if (data.type === 'ACCESS_GRANTED') {
-                    sessionStorage.setItem(sessionConsumedKey, 'true');
-                    statusText.innerText = "單次驗證通過 - 即時同步中";
-                    if (data.location) updateViewerMap(data.location);
-                } else if (data.type === 'ACCESS_DENIED' || data.type === 'SHARE_REVOKED') {
+                // 【單次存取核心判斷】：檢查該 Token 是否已經在本機/瀏覽器視窗中開啟使用過
+                if (localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey)) {
                     showExpiredModal();
-                } else if (data.type === 'LOCATION_UPDATE') {
-                    if (data.location) updateViewerMap(data.location);
+                    return;
                 }
-            };
 
-            // 發送請求存取權限
-            broadcastChannel.postMessage({ type: 'REQUEST_ACCESS' });
+                // 標記該 Token 已被存取使用（防重新整理 / 防二次開啟）
+                localStorage.setItem(storageKey, 'true');
+                sessionStorage.setItem(storageKey, 'true');
 
-            setTimeout(() => {
-                if (!viewerCoords.innerText.includes('.')) {
-                    if (tokenData && tokenData.active && !tokenData.consumed) {
-                        tokenData.consumed = true;
-                        localStorage.setItem(`cyber_token_${token}`, JSON.stringify(tokenData));
-                        sessionStorage.setItem(sessionConsumedKey, 'true');
-                        statusText.innerText = "驗證成功 (讀取中)";
-                    } else {
-                        showExpiredModal();
-                    }
-                }
-            }, 2000);
-        }
+                statusText.innerText = "單次驗證通過 - 已呈現定位數據";
+                statusDot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-cyber-green";
+                statusDotPing.className = "absolute inline-flex h-3 w-3 rounded-full bg-cyber-green opacity-75 animate-ping";
 
-        function updateViewerMap(pos) {
-            viewerCoords.innerText = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
-            viewerUpdated.innerText = pos.updated;
+                viewerCoords.innerText = `${payload.lat.toFixed(6)}, ${payload.lng.toFixed(6)}`;
+                viewerUpdated.innerText = payload.time;
 
-            createTargetMarker(pos.lat, pos.lng);
+                createTargetMarker(payload.lat, payload.lng);
+                map.setView([payload.lat, payload.lng], 17);
 
-            if (!map._viewerCentered) {
-                map.setView([pos.lat, pos.lng], 17);
-                map._viewerCentered = true;
-            } else {
-                map.panTo([pos.lat, pos.lng]);
+            } catch (err) {
+                console.error("無效或毀損的憑證數據", err);
+                showExpiredModal();
             }
         }
 
         function showExpiredModal() {
             expiredModal.classList.remove('hidden');
-            if (broadcastChannel) broadcastChannel.close();
         }
 
         // 事件監聽綁定
         document.getElementById('recenter-btn').addEventListener('click', () => {
             if (isViewerMode && targetMarker) {
                 map.setView(targetMarker.getLatLng(), 17);
-                showToast("已對焦至目標點");
-            } else if (userPos) {
+                showToast("已對焦至分享目標位置");
+            } else if (userPos && userPos.lat) {
                 map.setView([userPos.lat, userPos.lng], 17);
                 showToast("已對焦至我的位置");
             }
@@ -715,14 +626,9 @@
             initMap();
 
             const hash = window.location.hash;
-            let token = null;
-
-            if (hash && hash.includes('track?token=')) {
-                token = hash.split('track?token=')[1];
-            }
-
-            if (token) {
-                initViewerMode(token);
+            if (hash && hash.includes('#share?p=')) {
+                const encodedPayload = hash.split('#share?p=')[1];
+                initViewerMode(encodedPayload);
             } else {
                 startGeolocationTracking();
             }
