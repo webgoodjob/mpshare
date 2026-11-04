@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CYBER TRACK - 定位與單次分享追蹤</title>
+    <title>CYBER TRACK - 極短網址單次即時追蹤</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- Font Awesome Icons -->
@@ -28,11 +28,10 @@
             z-index: 1;
             background: #090d13;
         }
-        /* CSS 科技暗色濾鏡 - 解決瓦片圖片問題 */
         .dark-tiles {
             filter: brightness(0.7) invert(1) contrast(1.2) hue-rotate(200deg) saturate(0.3);
         }
-        
+
         /* 頂部 HUD 狀態欄 */
         .hud-header {
             position: absolute;
@@ -65,7 +64,6 @@
         .hud-title {
             font-size: 16px;
             font-weight: 700;
-            letter-spacing: 1px;
             color: #fff;
         }
         .badge {
@@ -107,11 +105,6 @@
             align-items: center;
             justify-content: center;
             gap: 10px;
-            transition: all 0.3s ease;
-        }
-        .btn-share:hover {
-            opacity: 0.95;
-            transform: translateY(-1px);
         }
 
         /* 彈窗 Modal */
@@ -133,7 +126,6 @@
             width: 100%;
             max-width: 480px;
             padding: 24px;
-            box-shadow: 0 0 30px rgba(0, 242, 254, 0.2);
         }
         .modal-title {
             font-size: 18px;
@@ -157,7 +149,8 @@
             border: 1px solid #30363d;
             border-radius: 8px;
             color: #4895ef;
-            font-size: 13px;
+            font-size: 14px;
+            font-weight: 600;
             word-break: break-all;
             margin-bottom: 16px;
             user-select: all;
@@ -177,7 +170,7 @@
         .btn-copy { background: #238636; color: #fff; }
         .btn-close { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; }
 
-        /* 全螢幕鎖定畫面 (針對二次開啟者) */
+        /* 全螢幕鎖定遮罩 */
         #lock-screen {
             display: none;
             position: fixed;
@@ -190,23 +183,9 @@
             text-align: center;
             padding: 30px;
         }
-        .lock-icon {
-            font-size: 64px;
-            color: #da3633;
-            margin-bottom: 20px;
-        }
-        .lock-title {
-            font-size: 22px;
-            font-weight: bold;
-            color: #f85149;
-            margin-bottom: 10px;
-        }
-        .lock-desc {
-            font-size: 14px;
-            color: #8b949e;
-            max-width: 400px;
-            line-height: 1.6;
-        }
+        .lock-icon { font-size: 64px; color: #da3633; margin-bottom: 20px; }
+        .lock-title { font-size: 22px; font-weight: bold; color: #f85149; margin-bottom: 10px; }
+        .lock-desc { font-size: 14px; color: #8b949e; max-width: 400px; line-height: 1.6; }
     </style>
 </head>
 <body>
@@ -218,30 +197,31 @@
             <div class="hud-title">CYBER TRACK</div>
             <div style="font-size: 11px; color: #8b949e;" id="status-text">初始化定位系統...</div>
         </div>
-        <span class="badge" id="mode-badge">即時模式</span>
+        <span class="badge" id="mode-badge">主控端</span>
     </div>
 
-    <!-- 地圖主容器 -->
+    <!-- 地圖容器 -->
     <div id="map"></div>
 
-    <!-- 底部控制按鈕 -->
+    <!-- 底部控制區 -->
     <div class="controls-panel" id="controls">
         <button class="btn-share" id="btn-share-trigger">
-            <i class="fa-solid fa-share-nodes"></i>
-            建立單次分享追蹤連結
+            <i class="fa-solid fa-satellite-dish"></i>
+            建立極短網址單次追蹤連結
         </button>
     </div>
 
-    <!-- 複製彈窗 Modal -->
+    <!-- 複製連結 Modal -->
     <div class="modal-overlay" id="share-modal">
         <div class="modal-card">
             <div class="modal-title">
-                <i class="fa-solid fa-lock"></i> 單次分享連結已建立
+                <i class="fa-solid fa-link"></i> 單次追蹤連結已建立
             </div>
             <div class="modal-desc">
-                請複製下方專屬連結發送給對方。<b>【注意】此連結僅供開啟一次</b>，第一個打開的人可以看到您的位置，之後重新整理或其他人再打開皆會顯示失效鎖定。
+                極短網址已產生！請將下方連結傳給指定對象。<br>
+                <span style="color:#f85149;">【單次限制】第一個人點開後，其他人或重新整理皆會永久失效！</span>
             </div>
-            <textarea class="url-box" id="share-url-input" rows="3" readonly></textarea>
+            <textarea class="url-box" id="share-url-input" rows="2" readonly></textarea>
             <div class="modal-actions">
                 <button class="btn-modal btn-copy" id="btn-copy-action">
                     <i class="fa-solid fa-copy"></i> 複製連結
@@ -251,26 +231,48 @@
         </div>
     </div>
 
-    <!-- 二次點擊鎖定遮罩 -->
+    <!-- 鎖定遮罩 -->
     <div id="lock-screen">
         <i class="fa-solid fa-shield-halved lock-icon"></i>
-        <div class="lock-title">⛔ 連結已失效並鎖定</div>
+        <div class="lock-title">⛔ 該連結已被其他人開啟並失效</div>
         <div class="lock-desc">
-            此為「單次安全分享連結」，該連結已被存取過一次。<br><br>
-            基於安全隱私機制，同一連結無法再次讀取或重新整理檢視。
+            此追蹤連結設定為「全球唯一單次開啟」。<br><br>
+            系統偵測到該連結已被率先讀取過，因此自動永久封鎖，無法再次檢視。
         </div>
     </div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        let map, userMarker, accuracyCircle;
-        let currentPos = { lat: 24.1477, lng: 120.6736 }; // 預設台中座標
+        const firebaseConfig = {
+            databaseURL: "https://cyber-track-public-default-rtdb.asia-southeast1.firebasedatabase.app/"
+        };
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
 
-        // 1. 初始化地圖 (使用相容性最好的 OpenStreetMap 搭配 CSS 暗色處理)
+        let map, userMarker, accuracyCircle;
+        let currentPos = { lat: 24.1477, lng: 120.6736 };
+        let currentSessionId = null;
+        let isBroadcasting = false;
+
+        // 產生 4 位數極短 Key (字母 + 數字)
+        function generateShortCode(length = 4) {
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
         function initMap() {
-            map = L.map('map', { zoomControl: false }).setView([currentPos.lat, currentPos.lng], 15);
+            map = L.map('map', { zoomControl: false }).setView([currentPos.lat, currentPos.lng], 16);
 
             L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
@@ -278,128 +280,140 @@
                 attribution: '© OpenStreetMap'
             }).addTo(map);
 
-            // 自訂 Pulse 指標
             const pulseIcon = L.divIcon({
                 className: 'custom-div-icon',
-                html: `<div style="background-color:#00f2fe; width:16px; height:16px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 12px #00f2fe;"></div>`,
+                html: `<div style="background-color:#00f2fe; width:16px; height:16px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 14px #00f2fe;"></div>`,
                 iconSize: [16, 16],
                 iconAnchor: [8, 8]
             });
 
             userMarker = L.marker([currentPos.lat, currentPos.lng], { icon: pulseIcon }).addTo(map);
-            accuracyCircle = L.circle([currentPos.lat, currentPos.lng], { radius: 100, color: '#00f2fe', fillColor: '#00f2fe', fillOpacity: 0.15 }).addTo(map);
+            accuracyCircle = L.circle([currentPos.lat, currentPos.lng], { radius: 50, color: '#00f2fe', fillColor: '#00f2fe', fillOpacity: 0.15 }).addTo(map);
         }
 
-        // 2. 檢查 URL 網址是否為「被分享者檢視」
-        function checkUrlHash() {
+        function updateLocationOnMap(lat, lng, accuracy = 50, statusMsg = "") {
+            currentPos = { lat, lng };
+            userMarker.setLatLng([lat, lng]);
+            accuracyCircle.setLatLng([lat, lng]);
+            accuracyCircle.setRadius(accuracy);
+            map.panTo([lat, lng], { animate: true, duration: 1.0 });
+
+            if (statusMsg) {
+                document.getElementById('status-text').innerText = statusMsg;
+            }
+        }
+
+        // 檢查是否為檢視者 (極短碼解析)
+        function checkViewerMode() {
             const hash = window.location.hash;
             if (hash && hash.startsWith('#track=')) {
-                try {
-                    const encodedData = hash.replace('#track=', '');
-                    const decodedStr = atob(encodedData);
-                    const data = JSON.parse(decodedStr);
+                const sessionId = hash.replace('#track=', '');
+                const openedRef = db.ref('sessions/' + sessionId + '/opened');
+                const sessionRef = db.ref('sessions/' + sessionId);
 
-                    // 檢查這個 Token 是否已經在該瀏覽器開啟過
-                    const usedToken = localStorage.getItem('used_token_' + data.id);
-                    if (usedToken) {
-                        // 已經開過了 -> 顯示全螢幕鎖定畫面
-                        document.getElementById('lock-screen').style.display = 'flex';
-                        return true;
+                // Firebase 交易安全鎖定
+                openedRef.transaction((currentVal) => {
+                    if (currentVal === false || currentVal === null) {
+                        return true; // 第一個點開的人搶到權限
                     } else {
-                        // 第一次點開 -> 註記已開啟並解密顯示
-                        localStorage.setItem('used_token_' + data.id, 'true');
-                        
-                        // 更新地圖為分享者的座標
-                        currentPos = { lat: data.lat, lng: data.lng };
-                        document.getElementById('status-text').innerText = '檢視中 (歷史單次快照)';
-                        document.getElementById('mode-badge').innerText = '單次存取者視角';
-                        document.getElementById('controls').style.display = 'none'; // 隱藏分享按鈕
-                        
-                        setTimeout(() => {
-                            map.setView([data.lat, data.lng], 16);
-                            userMarker.setLatLng([data.lat, data.lng]);
-                            accuracyCircle.setLatLng([data.lat, data.lng]);
-                        }, 500);
-                        return true;
+                        return; // 已經被開過，中止交易
                     }
-                } catch (e) {
-                    console.error('無效的分享連結', e);
-                }
+                }, (error, committed, snapshot) => {
+                    if (committed) {
+                        document.getElementById('controls').style.display = 'none';
+                        document.getElementById('mode-badge').innerText = '實時追蹤者視角';
+                        document.getElementById('status-text').innerText = '已成功連線，即時追蹤中...';
+
+                        // 監聽發送者座標
+                        sessionRef.on('value', (snap) => {
+                            const data = snap.val();
+                            if (data && data.lat && data.lng) {
+                                const timeStr = new Date(data.timestamp).toLocaleTimeString();
+                                updateLocationOnMap(data.lat, data.lng, data.accuracy || 30, `即時追蹤中 (最後更新 ${timeStr})`);
+                            }
+                        });
+                    } else {
+                        // 已經被開過 -> 顯示封鎖畫面
+                        document.getElementById('lock-screen').style.display = 'flex';
+                    }
+                });
+
+                return true;
             }
             return false;
         }
 
-        // 3. 定位追蹤 (GPS)
-        function startGeolocation() {
+        function startHostGPS() {
             if ("geolocation" in navigator) {
                 navigator.geolocation.watchPosition(
                     (position) => {
-                        currentPos.lat = position.coords.latitude;
-                        currentPos.lng = position.coords.longitude;
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        const acc = position.coords.accuracy;
 
-                        document.getElementById('status-text').innerText = `高精度 GPS 定位中 (${position.coords.accuracy.toFixed(0)}m)`;
-                        
-                        map.setView([currentPos.lat, currentPos.lng], 16);
-                        userMarker.setLatLng([currentPos.lat, currentPos.lng]);
-                        accuracyCircle.setLatLng([currentPos.lat, currentPos.lng]);
-                        accuracyCircle.setRadius(position.coords.accuracy);
+                        updateLocationOnMap(lat, lng, acc, `GPS 定位中 (精確度 ${acc.toFixed(0)}m)`);
+
+                        if (isBroadcasting && currentSessionId) {
+                            db.ref('sessions/' + currentSessionId).update({
+                                lat: lat,
+                                lng: lng,
+                                accuracy: acc,
+                                timestamp: Date.now()
+                            });
+                        }
                     },
                     (error) => {
-                        document.getElementById('status-text').innerText = '使用模擬展示定位 (請在 HTTPS 開啟 GPS)';
+                        document.getElementById('status-text').innerText = '請開啟 GPS 權限以取得精確即時位置';
                     },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
                 );
-            } else {
-                document.getElementById('status-text').innerText = '瀏覽器不支援 GPS 定位';
             }
         }
 
-        // 4. 建立單次分享連結
+        // 點擊建立極短網址連結
         document.getElementById('btn-share-trigger').addEventListener('click', () => {
-            const shareId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-            const payload = {
-                id: shareId,
+            currentSessionId = generateShortCode(4); // 產生 4 位數極短 Code (如: a7k2)
+            isBroadcasting = true;
+
+            db.ref('sessions/' + currentSessionId).set({
                 lat: currentPos.lat,
                 lng: currentPos.lng,
-                time: new Date().getTime()
-            };
+                accuracy: 30,
+                timestamp: Date.now(),
+                opened: false
+            });
 
-            const encoded = btoa(JSON.stringify(payload));
             const baseUrl = window.location.href.split('#')[0];
-            const fullShareUrl = `${baseUrl}#track=${encoded}`;
+            const fullShareUrl = `${baseUrl}#track=${currentSessionId}`;
 
-            // 寫入畫面 Input 並跳出 Modal
             const urlInput = document.getElementById('share-url-input');
             urlInput.value = fullShareUrl;
             document.getElementById('share-modal').style.display = 'flex';
         });
 
-        // 5. 複製按鈕功能 (包含標準備援做法)
         document.getElementById('btn-copy-action').addEventListener('click', () => {
             const urlInput = document.getElementById('share-url-input');
             urlInput.select();
-            urlInput.setSelectionRange(0, 99999); // 針對手機瀏覽器
+            urlInput.setSelectionRange(0, 99999);
 
             try {
                 navigator.clipboard.writeText(urlInput.value);
-                alert('連結已成功複製到剪貼簿！');
+                alert('極短追蹤連結已成功複製！');
             } catch (err) {
                 document.execCommand('copy');
-                alert('連結已成功複製！');
+                alert('極短追蹤連結已成功複製！');
             }
         });
 
-        // 關閉 Modal
         document.getElementById('btn-close-action').addEventListener('click', () => {
             document.getElementById('share-modal').style.display = 'none';
         });
 
-        // 啟動流程
         window.onload = () => {
             initMap();
-            const isViewer = checkUrlHash();
+            const isViewer = checkViewerMode();
             if (!isViewer) {
-                startGeolocation();
+                startHostGPS();
             }
         };
     </script>
