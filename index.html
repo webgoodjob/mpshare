@@ -236,7 +236,7 @@
         <i class="fa-solid fa-shield-halved lock-icon"></i>
         <div class="lock-title">⛔ 該連結已被其他人開啟並失效</div>
         <div class="lock-desc">
-            此追蹤連結設定為「全球唯一單次開啟」。<br><br>
+            此追蹤連結設定為“全球唯一單次開啟”。<br><br>
             系統偵測到該連結已被率先讀取過，因此自動永久封鎖，無法再次檢視。
         </div>
     </div>
@@ -316,99 +316,116 @@
             }
         }
 
-        // 使用 URLSearchParams 抓取 ?track= 參數（絕對不會被通訊軟體吃掉）
+        // 強力解析網址中的 ?track= 參數
         function getTrackSessionId() {
             const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get('track');
+            const trackVal = urlParams.get('track');
+            if (trackVal) return trackVal.trim();
+
+            // 備用：萬一網址包含 hash 或其他格式，手動切片檢查
+            const fullUrl = window.location.href;
+            if (fullUrl.includes('track=')) {
+                const parts = fullUrl.split('track=');
+                if (parts.length > 1) {
+                    return parts[1].split('&')[0].split('#')[0].trim();
+                }
+            }
+            return null;
         }
 
-        // 接收端邏輯
-        function checkViewerMode() {
+        // 【絕對優先】頁面載入時第一秒先檢查是不是接收端
+        window.onload = () => {
             const sessionId = getTrackSessionId();
+            
             if (sessionId) {
-                console.log("成功偵測到追蹤代碼:", sessionId);
+                // === 【模式 A：接收端/檢視者】===
+                console.log("成功辨識為接收端，代碼:", sessionId);
+                document.getElementById('controls').style.display = 'none'; // 隱藏建立按鈕
+                document.getElementById('mode-badge').innerText = '即時追蹤中';
+                document.getElementById('status-text').innerText = '正在連線至雲端資料庫...';
+
                 const openedRef = db.ref('sessions/' + sessionId + '/opened');
                 const sessionRef = db.ref('sessions/' + sessionId);
 
+                // 先行初始化地圖（預設位置，等資料一到立刻移動）
                 initMap(24.1477, 120.6736);
 
                 openedRef.transaction((currentVal) => {
                     if (currentVal === false || currentVal === null) {
-                        return true;
+                        return true; // 搶佔單次開啟權限
                     } else {
-                        return;
+                        return; // 已經被開過了，拒絕
                     }
                 }, (error, committed, snapshot) => {
                     if (committed) {
-                        document.getElementById('controls').style.display = 'none';
-                        document.getElementById('mode-badge').innerText = '即時追蹤中';
-                        document.getElementById('status-text').innerText = '連線成功，正在接收實時坐標...';
+                        document.getElementById('status-text').innerText = '連線成功，正在接收發送端位置...';
 
+                        // 即時同步發送端位置
                         sessionRef.on('value', (snap) => {
                             const data = snap.val();
                             if (data && data.lat && data.lng) {
                                 const timeStr = new Date(data.timestamp).toLocaleTimeString();
-                                updateLocationOnMap(data.lat, data.lng, data.accuracy || 30, `即時動態追蹤中 (${timeStr})`);
+                                updateLocationOnMap(data.lat, data.lng, data.accuracy || 30, `即時追蹤中 (${timeStr})`);
+                            } else {
+                                document.getElementById('status-text').innerText = '等待發送端發布座標中...';
                             }
                         });
                     } else {
+                        // 已經被其他人開過 -> 顯示鎖定畫面
                         document.getElementById('lock-screen').style.display = 'flex';
                     }
                 });
 
-                return true;
-            }
-            return false;
-        }
-
-        // 主控發送端初始化
-        function startHostMode() {
-            document.getElementById('mode-badge').innerText = '主控發送端';
-            document.getElementById('status-text').innerText = '正在取得您的 GPS 定位...';
-
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-                        const acc = position.coords.accuracy;
-
-                        initMap(lat, lng);
-                        updateLocationOnMap(lat, lng, acc, `GPS 已定位 (${acc.toFixed(0)}m)`);
-
-                        navigator.geolocation.watchPosition(
-                            (pos) => {
-                                const newLat = pos.coords.latitude;
-                                const newLng = pos.coords.longitude;
-                                const newAcc = pos.coords.accuracy;
-
-                                updateLocationOnMap(newLat, newLng, newAcc, `GPS 追蹤中 (${newAcc.toFixed(0)}m)`);
-                                
-                                if (isBroadcasting && currentSessionId) {
-                                    db.ref('sessions/' + currentSessionId).update({
-                                        lat: newLat,
-                                        lng: newLng,
-                                        accuracy: newAcc,
-                                        timestamp: Date.now()
-                                    });
-                                }
-                            },
-                            (err) => {},
-                            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-                        );
-                    },
-                    (error) => {
-                        initMap(24.1477, 120.6736);
-                        document.getElementById('status-text').innerText = '無法取得 GPS，請確認定位已開啟';
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                );
             } else {
-                initMap(24.1477, 120.6736);
-            }
-        }
+                // === 【模式 B：主控發送端】===
+                document.getElementById('mode-badge').innerText = '主控發送端';
+                document.getElementById('status-text').innerText = '正在取得您的 GPS 定位...';
+                document.getElementById('controls').style.display = 'block';
 
-        // 點擊建立分享連結（改為產生成 ?track= 的網址）
+                if ("geolocation" in navigator) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            const lat = position.coords.latitude;
+                            const lng = position.coords.longitude;
+                            const acc = position.coords.accuracy;
+
+                            initMap(lat, lng);
+                            updateLocationOnMap(lat, lng, acc, `GPS 已定位 (${acc.toFixed(0)}m)`);
+
+                            navigator.geolocation.watchPosition(
+                                (pos) => {
+                                    const newLat = pos.coords.latitude;
+                                    const newLng = pos.coords.longitude;
+                                    const newAcc = pos.coords.accuracy;
+
+                                    updateLocationOnMap(newLat, newLng, newAcc, `GPS 追蹤中 (${newAcc.toFixed(0)}m)`);
+                                    
+                                    if (isBroadcasting && currentSessionId) {
+                                        db.ref('sessions/' + currentSessionId).update({
+                                            lat: newLat,
+                                            lng: newLng,
+                                            accuracy: newAcc,
+                                            timestamp: Date.now()
+                                        });
+                                    }
+                                },
+                                (err) => {},
+                                { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                            );
+                        },
+                        (error) => {
+                            initMap(24.1477, 120.6736);
+                            document.getElementById('status-text').innerText = '無法取得 GPS，請確認定位已開啟';
+                        },
+                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    );
+                } else {
+                    initMap(24.1477, 120.6736);
+                }
+            }
+        };
+
+        // 點擊建立分享連結
         document.getElementById('btn-share-trigger').addEventListener('click', () => {
             if (!currentPos) {
                 alert('正在等待 GPS 定位，請稍候再試！');
@@ -461,13 +478,6 @@
         document.getElementById('btn-close-action').addEventListener('click', () => {
             document.getElementById('share-modal').style.display = 'none';
         });
-
-        window.onload = () => {
-            const isViewer = checkViewerMode();
-            if (!isViewer) {
-                startHostMode();
-            }
-        };
     </script>
 </body>
 </html>
