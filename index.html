@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CYBER TRACK - 極速即時追蹤</title>
+    <title>CYBER TRACK - 衛星高精度追蹤</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- Font Awesome Icons -->
@@ -51,15 +51,25 @@
         .status-dot {
             width: 12px;
             height: 12px;
-            background-color: #00f2fe;
+            background-color: #f85149;
             border-radius: 50%;
-            box-shadow: 0 0 10px #00f2fe;
-            animation: pulse 1.5s infinite;
+            box-shadow: 0 0 10px #f85149;
+            animation: pulse-red 1.5s infinite;
         }
-        @keyframes pulse {
+        .status-dot.active {
+            background-color: #00f2fe;
+            box-shadow: 0 0 10px #00f2fe;
+            animation: pulse-blue 1.5s infinite;
+        }
+        @keyframes pulse-blue {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 242, 254, 0.7); }
             70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(0, 242, 254, 0); }
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 242, 254, 0); }
+        }
+        @keyframes pulse-red {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(248, 81, 73, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(248, 81, 73, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(248, 81, 73, 0); }
         }
         .hud-title {
             font-size: 16px;
@@ -197,10 +207,10 @@
 
     <!-- 頂部 HUD -->
     <div class="hud-header">
-        <div class="status-dot"></div>
+        <div class="status-dot" id="status-dot"></div>
         <div>
             <div class="hud-title">CYBER TRACK</div>
-            <div style="font-size: 11px; color: #8b949e;" id="status-text">正在鎖定衛星定位中...</div>
+            <div style="font-size: 11px; color: #8b949e;" id="status-text">正在收尋衛星訊號...</div>
         </div>
         <span class="badge" id="mode-badge">主控端</span>
     </div>
@@ -212,7 +222,7 @@
     <div class="controls-panel" id="controls">
         <button class="btn-share" id="btn-share-trigger" disabled>
             <i class="fa-solid fa-satellite-dish"></i>
-            等待精準 GPS 鎖定中...
+            等待衛星精準定位中 (精確度需 &lt; 20m)
         </button>
     </div>
 
@@ -326,13 +336,13 @@
                         document.getElementById('controls').style.display = 'none';
                         document.getElementById('mode-badge').innerText = '實時追蹤者視角';
                         document.getElementById('status-text').innerText = '已成功連線，即時追蹤中...';
+                        document.getElementById('status-dot').classList.add('active');
 
-                        // 即時同步監聽發送端位置
                         sessionRef.on('value', (snap) => {
                             const data = snap.val();
                             if (data && data.lat && data.lng) {
                                 const timeStr = new Date(data.timestamp).toLocaleTimeString();
-                                updateLocationOnMap(data.lat, data.lng, data.accuracy || 30, `即時動態追蹤中 (${timeStr})`);
+                                updateLocationOnMap(data.lat, data.lng, data.accuracy || 20, `即時動態追蹤中 (${timeStr})`);
                             }
                         });
                     } else {
@@ -353,16 +363,22 @@
                         const lng = position.coords.longitude;
                         const acc = position.coords.accuracy;
 
-                        if (acc <= 100) {
+                        // 【關鍵升級】將門檻嚴格限制在 20 公尺以內才允許解鎖分享按鈕
+                        if (acc <= 20) {
                             hasValidGPS = true;
                             const shareBtn = document.getElementById('btn-share-trigger');
                             shareBtn.disabled = false;
                             shareBtn.innerHTML = `<i class="fa-solid fa-satellite-dish"></i> 建立極短網址單次追蹤連結`;
+                            document.getElementById('status-dot').classList.add('active');
+                        } else {
+                            const shareBtn = document.getElementById('btn-share-trigger');
+                            shareBtn.disabled = true;
+                            shareBtn.innerHTML = `等待衛星精準對焦中 (目前精度: ${acc.toFixed(0)}m)`;
+                            document.getElementById('status-dot').classList.remove('active');
                         }
 
-                        updateLocationOnMap(lat, lng, acc, `GPS 高精度連線中 (精確度 ${acc.toFixed(0)}m)`);
+                        updateLocationOnMap(lat, lng, acc, `GPS 訊號收斂中 (精確度 ${acc.toFixed(0)}m)`);
 
-                        // 只要有廣播中，立即更新至雲端
                         if (isBroadcasting && currentSessionId) {
                             db.ref('sessions/' + currentSessionId).update({
                                 lat: lat,
@@ -378,11 +394,10 @@
                     { 
                         enableHighAccuracy: true, 
                         timeout: 5000, 
-                        maximumAge: 0 // 強制不使用快取，確保每秒拿最新坐標
+                        maximumAge: 0 
                     }
                 );
 
-                // 【額外加碼】每 3 秒自動強制往雲端發送一次心跳與坐標，確保即時流暢度
                 setInterval(() => {
                     if (isBroadcasting && currentSessionId && currentPos) {
                         db.ref('sessions/' + currentSessionId).update({
@@ -397,7 +412,7 @@
 
         document.getElementById('btn-share-trigger').addEventListener('click', () => {
             if (!hasValidGPS) {
-                alert('正在等待精確 GPS 鎖定，請稍候再試！');
+                alert('GPS 精度尚未達到 20 公尺以內，請移動至空曠處或稍候片刻！');
                 return;
             }
 
