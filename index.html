@@ -197,7 +197,7 @@
             <div class="hud-title">CYBER TRACK</div>
             <div style="font-size: 11px; color: #8b949e;" id="status-text">初始化系統...</div>
         </div>
-        <span class="badge" id="mode-badge">主控端</span>
+        <span class="badge" id="mode-badge">載入中</span>
     </div>
 
     <!-- 地圖容器 -->
@@ -295,7 +295,6 @@
             userMarker = L.marker([lat, lng], { icon: pulseIcon }).addTo(map);
             accuracyCircle = L.circle([lat, lng], { radius: 25, color: '#00f2fe', fillColor: '#00f2fe', fillOpacity: 0.15 }).addTo(map);
 
-            // 【關鍵修正】強制重繪地圖尺寸，徹底解決手機瀏覽器黑畫面
             setTimeout(() => {
                 map.invalidateSize();
             }, 250);
@@ -317,15 +316,27 @@
             }
         }
 
+        // 強力解析網址中的 track 代碼
+        function getTrackSessionId() {
+            const fullUrl = window.location.href;
+            if (fullUrl.includes('track=')) {
+                const parts = fullUrl.split('track=');
+                if (parts.length > 1) {
+                    // 取出 track= 後面的 4 位數代碼（過濾掉其他結尾符號）
+                    return parts[1].split('&')[0].split('#')[0].trim();
+                }
+            }
+            return null;
+        }
+
         // 接收端邏輯
         function checkViewerMode() {
-            const hash = window.location.hash;
-            if (hash && hash.startsWith('#track=')) {
-                const sessionId = hash.replace('#track=', '');
+            const sessionId = getTrackSessionId();
+            if (sessionId) {
+                console.log("偵測到追蹤代碼:", sessionId);
                 const openedRef = db.ref('sessions/' + sessionId + '/opened');
                 const sessionRef = db.ref('sessions/' + sessionId);
 
-                // 先行以預設中心點初始化地圖，避免黑畫面
                 initMap(24.1477, 120.6736);
 
                 openedRef.transaction((currentVal) => {
@@ -340,7 +351,6 @@
                         document.getElementById('mode-badge').innerText = '即時追蹤中';
                         document.getElementById('status-text').innerText = '連線成功，正在接收實時坐標...';
 
-                        // 監聽雲端，隨時更新位置
                         sessionRef.on('value', (snap) => {
                             const data = snap.val();
                             if (data && data.lat && data.lng) {
@@ -405,7 +415,6 @@
             }
         }
 
-        // 點擊建立分享連結
         document.getElementById('btn-share-trigger').addEventListener('click', () => {
             if (!currentPos) {
                 alert('正在等待 GPS 定位，請稍候再試！');
@@ -433,7 +442,7 @@
                 }
             }, 2000);
 
-            const baseUrl = window.location.href.split('#')[0];
+            const baseUrl = window.location.href.split('#')[0].split('?')[0];
             const fullShareUrl = `${baseUrl}#track=${currentSessionId}`;
 
             const urlInput = document.getElementById('share-url-input');
