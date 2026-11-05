@@ -236,7 +236,7 @@
         <i class="fa-solid fa-shield-halved lock-icon"></i>
         <div class="lock-title">⛔ 該連結已被其他人開啟並失效</div>
         <div class="lock-desc">
-            此追蹤連結設定為“全球唯一單次開啟”。<br><br>
+            此追蹤連結設定為「全球唯一單次開啟」。<br><br>
             系統偵測到該連結已被率先讀取過，因此自動永久封鎖，無法再次檢視。
         </div>
     </div>
@@ -316,51 +316,49 @@
             }
         }
 
-        // 強力解析網址中的 ?track= 參數
+        // 強力全方位抓取代碼（同時支援 ?track= 與 #track=）
         function getTrackSessionId() {
             const urlParams = new URLSearchParams(window.location.search);
-            const trackVal = urlParams.get('track');
-            if (trackVal) return trackVal.trim();
+            if (urlParams.has('track')) return urlParams.get('track').trim();
 
-            // 備用：萬一網址包含 hash 或其他格式，手動切片檢查
+            const hash = window.location.hash;
+            if (hash.includes('track=')) {
+                return hash.split('track=')[1].split('&')[0].trim();
+            }
+
             const fullUrl = window.location.href;
             if (fullUrl.includes('track=')) {
-                const parts = fullUrl.split('track=');
-                if (parts.length > 1) {
-                    return parts[1].split('&')[0].split('#')[0].trim();
-                }
+                return fullUrl.split('track=')[1].split('&')[0].split('#')[0].trim();
             }
             return null;
         }
 
-        // 【絕對優先】頁面載入時第一秒先檢查是不是接收端
+        // 頁面載入核心判斷
         window.onload = () => {
             const sessionId = getTrackSessionId();
             
             if (sessionId) {
-                // === 【模式 A：接收端/檢視者】===
+                // === 【接收端模式】===
                 console.log("成功辨識為接收端，代碼:", sessionId);
-                document.getElementById('controls').style.display = 'none'; // 隱藏建立按鈕
+                document.getElementById('controls').style.display = 'none';
                 document.getElementById('mode-badge').innerText = '即時追蹤中';
                 document.getElementById('status-text').innerText = '正在連線至雲端資料庫...';
 
                 const openedRef = db.ref('sessions/' + sessionId + '/opened');
                 const sessionRef = db.ref('sessions/' + sessionId);
 
-                // 先行初始化地圖（預設位置，等資料一到立刻移動）
                 initMap(24.1477, 120.6736);
 
                 openedRef.transaction((currentVal) => {
                     if (currentVal === false || currentVal === null) {
-                        return true; // 搶佔單次開啟權限
+                        return true;
                     } else {
-                        return; // 已經被開過了，拒絕
+                        return;
                     }
                 }, (error, committed, snapshot) => {
                     if (committed) {
                         document.getElementById('status-text').innerText = '連線成功，正在接收發送端位置...';
 
-                        // 即時同步發送端位置
                         sessionRef.on('value', (snap) => {
                             const data = snap.val();
                             if (data && data.lat && data.lng) {
@@ -371,13 +369,12 @@
                             }
                         });
                     } else {
-                        // 已經被其他人開過 -> 顯示鎖定畫面
                         document.getElementById('lock-screen').style.display = 'flex';
                     }
                 });
 
             } else {
-                // === 【模式 B：主控發送端】===
+                // === 【主控發送端模式】===
                 document.getElementById('mode-badge').innerText = '主控發送端';
                 document.getElementById('status-text').innerText = '正在取得您的 GPS 定位...';
                 document.getElementById('controls').style.display = 'block';
@@ -425,7 +422,7 @@
             }
         };
 
-        // 點擊建立分享連結
+        // 點擊建立分享連結：自動抓取當前頁面的完整正確路徑（包含 /mpshare/）
         document.getElementById('btn-share-trigger').addEventListener('click', () => {
             if (!currentPos) {
                 alert('正在等待 GPS 定位，請稍候再試！');
@@ -453,8 +450,10 @@
                 }
             }, 2000);
 
-            const baseUrl = window.location.href.split('#')[0].split('?')[0];
-            const fullShareUrl = `${baseUrl}?track=${currentSessionId}`;
+            // 嚴格保留當前頁面的完整路徑（例如 .../mpshare/index.html 或 .../mpshare/）
+            let loc = window.location;
+            let baseDir = loc.origin + loc.pathname;
+            const fullShareUrl = `${baseDir}?track=${currentSessionId}`;
 
             const urlInput = document.getElementById('share-url-input');
             urlInput.value = fullShareUrl;
