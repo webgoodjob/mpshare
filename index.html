@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CYBER TRACK - 即時動態追蹤2</title>
+    <title>CYBER TRACK - 即時動態追蹤</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- Font Awesome Icons -->
@@ -316,24 +316,17 @@
             }
         }
 
-        // 強力解析網址中的 track 代碼
+        // 使用 URLSearchParams 抓取 ?track= 參數（絕對不會被通訊軟體吃掉）
         function getTrackSessionId() {
-            const fullUrl = window.location.href;
-            if (fullUrl.includes('track=')) {
-                const parts = fullUrl.split('track=');
-                if (parts.length > 1) {
-                    // 取出 track= 後面的 4 位數代碼（過濾掉其他結尾符號）
-                    return parts[1].split('&')[0].split('#')[0].trim();
-                }
-            }
-            return null;
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('track');
         }
 
         // 接收端邏輯
         function checkViewerMode() {
             const sessionId = getTrackSessionId();
             if (sessionId) {
-                console.log("偵測到追蹤代碼:", sessionId);
+                console.log("成功偵測到追蹤代碼:", sessionId);
                 const openedRef = db.ref('sessions/' + sessionId + '/opened');
                 const sessionRef = db.ref('sessions/' + sessionId);
 
@@ -415,6 +408,7 @@
             }
         }
 
+        // 點擊建立分享連結（改為產生成 ?track= 的網址）
         document.getElementById('btn-share-trigger').addEventListener('click', () => {
             if (!currentPos) {
                 alert('正在等待 GPS 定位，請稍候再試！');
@@ -443,7 +437,7 @@
             }, 2000);
 
             const baseUrl = window.location.href.split('#')[0].split('?')[0];
-            const fullShareUrl = `${baseUrl}#track=${currentSessionId}`;
+            const fullShareUrl = `${baseUrl}?track=${currentSessionId}`;
 
             const urlInput = document.getElementById('share-url-input');
             urlInput.value = fullShareUrl;
