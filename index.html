@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CYBER TRACK - 即時追蹤</title>
+    <title>CYBER TRACK - 即時動態追蹤</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- Font Awesome Icons -->
@@ -257,7 +257,7 @@
         const db = firebase.database();
 
         let map, userMarker, accuracyCircle;
-        let currentPos = { lat: 24.1477, lng: 120.6736 }; // 預設臨時中心
+        let currentPos = null;
         let currentSessionId = null;
         let isBroadcasting = false;
 
@@ -271,7 +271,7 @@
         }
 
         function initMap(lat, lng) {
-            map = L.map('map', { zoomControl: false }).setView([lat, lng], 16);
+            map = L.map('map', { zoomControl: false }).setView([lat, lng], 17);
 
             L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
@@ -287,23 +287,25 @@
             });
 
             userMarker = L.marker([lat, lng], { icon: pulseIcon }).addTo(map);
-            accuracyCircle = L.circle([lat, lng], { radius: 30, color: '#00f2fe', fillColor: '#00f2fe', fillOpacity: 0.15 }).addTo(map);
+            accuracyCircle = L.circle([lat, lng], { radius: 25, color: '#00f2fe', fillColor: '#00f2fe', fillOpacity: 0.15 }).addTo(map);
         }
 
+        // 優化後的平滑移動更新
         function updateLocationOnMap(lat, lng, accuracy = 30, statusMsg = "") {
             currentPos = { lat, lng };
             if (userMarker && accuracyCircle && map) {
                 userMarker.setLatLng([lat, lng]);
                 accuracyCircle.setLatLng([lat, lng]);
                 accuracyCircle.setRadius(accuracy);
-                map.panTo([lat, lng], { animate: true, duration: 1.0 });
+                // 平滑跟隨移動
+                map.panTo([lat, lng], { animate: true, duration: 0.8 });
             }
             if (statusMsg) {
                 document.getElementById('status-text').innerText = statusMsg;
             }
         }
 
-        // 檢查是否為「接收端/檢視者」
+        // 接收端邏輯
         function checkViewerMode() {
             const hash = window.location.hash;
             if (hash && hash.startsWith('#track=')) {
@@ -311,7 +313,6 @@
                 const openedRef = db.ref('sessions/' + sessionId + '/opened');
                 const sessionRef = db.ref('sessions/' + sessionId);
 
-                // 全球唯一單次開啟鎖定
                 openedRef.transaction((currentVal) => {
                     if (currentVal === false || currentVal === null) {
                         return true;
@@ -320,32 +321,30 @@
                     }
                 }, (error, committed, snapshot) => {
                     if (committed) {
-                        // 成功搶到權限！切換為檢視模式
                         document.getElementById('controls').style.display = 'none';
-                        document.getElementById('mode-badge').innerText = '即時追蹤檢視中';
-                        document.getElementById('status-text').innerText = '連線成功，正在接收位置...';
+                        document.getElementById('mode-badge').innerText = '即時追蹤中';
+                        document.getElementById('status-text').innerText = '連線成功，正在接收實時坐標...';
 
-                        // 首次先讀取一次雲端位置來初始化地圖中心，避免預設在台中市區
+                        // 第一次抓取中心點初始化地圖
                         sessionRef.once('value', (snap) => {
                             const data = snap.val();
                             if (data && data.lat && data.lng) {
                                 initMap(data.lat, data.lng);
-                                updateLocationOnMap(data.lat, data.lng, data.accuracy || 30, '即時動態追蹤中');
+                                updateLocationOnMap(data.lat, data.lng, data.accuracy || 30, '即時同步追蹤中');
                             } else {
                                 initMap(24.1477, 120.6736);
                             }
                         });
 
-                        // 持續監聽發送端位置，即時在畫面上滑動
+                        // 持續監聽雲端，隨時更新位置
                         sessionRef.on('value', (snap) => {
                             const data = snap.val();
                             if (data && data.lat && data.lng) {
                                 const timeStr = new Date(data.timestamp).toLocaleTimeString();
-                                updateLocationOnMap(data.lat, data.lng, data.accuracy || 30, `即時追蹤中 (${timeStr})`);
+                                updateLocationOnMap(data.lat, data.lng, data.accuracy || 30, `即時動態追蹤中 (${timeStr})`);
                             }
                         });
                     } else {
-                        // 已經被開過 -> 顯示封鎖畫面
                         document.getElementById('lock-screen').style.display = 'flex';
                     }
                 });
@@ -355,7 +354,7 @@
             return false;
         }
 
-        // 如果是主控端 (自己要分享位置給別人)
+        // 主控發送端初始化
         function startHostMode() {
             document.getElementById('mode-badge').innerText = '主控發送端';
             document.getElementById('status-text').innerText = '正在取得您的 GPS 定位...';
@@ -370,17 +369,20 @@
                         initMap(lat, lng);
                         updateLocationOnMap(lat, lng, acc, `GPS 已定位 (${acc.toFixed(0)}m)`);
 
-                        // 持續在背景監聽自己的移動
+                        // 高頻率監聽自身移動
                         navigator.geolocation.watchPosition(
                             (pos) => {
-                                currentPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                                updateLocationOnMap(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, `GPS 追蹤中`);
+                                const newLat = pos.coords.latitude;
+                                const newLng = pos.coords.longitude;
+                                const newAcc = pos.coords.accuracy;
+
+                                updateLocationOnMap(newLat, newLng, newAcc, `GPS 追蹤中 (${newAcc.toFixed(0)}m)`);
                                 
                                 if (isBroadcasting && currentSessionId) {
                                     db.ref('sessions/' + currentSessionId).update({
-                                        lat: pos.coords.latitude,
-                                        lng: pos.coords.longitude,
-                                        accuracy: pos.coords.accuracy,
+                                        lat: newLat,
+                                        lng: newLng,
+                                        accuracy: newAcc,
                                         timestamp: Date.now()
                                     });
                                 }
@@ -390,7 +392,6 @@
                         );
                     },
                     (error) => {
-                        // 萬一 GPS 失敗，給個預設並初始化地圖
                         initMap(24.1477, 120.6736);
                         document.getElementById('status-text').innerText = '無法取得 GPS，請確認定位已開啟';
                     },
@@ -411,7 +412,7 @@
             currentSessionId = generateShortCode(4);
             isBroadcasting = true;
 
-            // 將當前精準座標寫入雲端
+            // 寫入初始位置
             db.ref('sessions/' + currentSessionId).set({
                 lat: currentPos.lat,
                 lng: currentPos.lng,
@@ -420,7 +421,7 @@
                 opened: false
             });
 
-            // 每 2 秒同步一次最新坐標
+            // 每 2 秒強制同步一次最新位置到雲端
             setInterval(() => {
                 if (isBroadcasting && currentSessionId && currentPos) {
                     db.ref('sessions/' + currentSessionId).update({
