@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CYBER TRACK - 衛星高精度追蹤</title>
+    <title>CYBER TRACK - 即時高精度追蹤</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- Font Awesome Icons -->
@@ -51,25 +51,15 @@
         .status-dot {
             width: 12px;
             height: 12px;
-            background-color: #f85149;
-            border-radius: 50%;
-            box-shadow: 0 0 10px #f85149;
-            animation: pulse-red 1.5s infinite;
-        }
-        .status-dot.active {
             background-color: #00f2fe;
+            border-radius: 50%;
             box-shadow: 0 0 10px #00f2fe;
-            animation: pulse-blue 1.5s infinite;
+            animation: pulse 1.5s infinite;
         }
-        @keyframes pulse-blue {
+        @keyframes pulse {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 242, 254, 0.7); }
             70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(0, 242, 254, 0); }
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 242, 254, 0); }
-        }
-        @keyframes pulse-red {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(248, 81, 73, 0.7); }
-            70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(248, 81, 73, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(248, 81, 73, 0); }
         }
         .hud-title {
             font-size: 16px;
@@ -115,11 +105,6 @@
             align-items: center;
             justify-content: center;
             gap: 10px;
-        }
-        .btn-share:disabled {
-            background: #21262d;
-            color: #484f58;
-            cursor: not-allowed;
         }
 
         /* 彈窗 Modal */
@@ -207,10 +192,10 @@
 
     <!-- 頂部 HUD -->
     <div class="hud-header">
-        <div class="status-dot" id="status-dot"></div>
+        <div class="status-dot"></div>
         <div>
             <div class="hud-title">CYBER TRACK</div>
-            <div style="font-size: 11px; color: #8b949e;" id="status-text">正在收尋衛星訊號...</div>
+            <div style="font-size: 11px; color: #8b949e;" id="status-text">初始化定位系統...</div>
         </div>
         <span class="badge" id="mode-badge">主控端</span>
     </div>
@@ -220,9 +205,9 @@
 
     <!-- 底部控制區 -->
     <div class="controls-panel" id="controls">
-        <button class="btn-share" id="btn-share-trigger" disabled>
+        <button class="btn-share" id="btn-share-trigger">
             <i class="fa-solid fa-satellite-dish"></i>
-            等待衛星精準定位中 (精確度需 &lt; 20m)
+            建立極短網址單次追蹤連結
         </button>
     </div>
 
@@ -230,7 +215,7 @@
     <div class="modal-overlay" id="share-modal">
         <div class="modal-card">
             <div class="modal-title">
-                <i class="fa-solid fa-link"></i> 即時追蹤連結已建立
+                <i class="fa-solid fa-link"></i> 單次追蹤連結已建立
             </div>
             <div class="modal-desc">
                 極短網址已產生！請將下方連結傳給指定對象。<br>
@@ -275,7 +260,6 @@
         let currentPos = { lat: 24.1477, lng: 120.6736 };
         let currentSessionId = null;
         let isBroadcasting = false;
-        let hasValidGPS = false;
 
         function generateShortCode(length = 4) {
             const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -336,13 +320,12 @@
                         document.getElementById('controls').style.display = 'none';
                         document.getElementById('mode-badge').innerText = '實時追蹤者視角';
                         document.getElementById('status-text').innerText = '已成功連線，即時追蹤中...';
-                        document.getElementById('status-dot').classList.add('active');
 
                         sessionRef.on('value', (snap) => {
                             const data = snap.val();
                             if (data && data.lat && data.lng) {
                                 const timeStr = new Date(data.timestamp).toLocaleTimeString();
-                                updateLocationOnMap(data.lat, data.lng, data.accuracy || 20, `即時動態追蹤中 (${timeStr})`);
+                                updateLocationOnMap(data.lat, data.lng, data.accuracy || 30, `即時追蹤中 (${timeStr})`);
                             }
                         });
                     } else {
@@ -363,76 +346,69 @@
                         const lng = position.coords.longitude;
                         const acc = position.coords.accuracy;
 
-                        // 【關鍵升級】將門檻嚴格限制在 20 公尺以內才允許解鎖分享按鈕
-                        if (acc <= 20) {
-                            hasValidGPS = true;
-                            const shareBtn = document.getElementById('btn-share-trigger');
-                            shareBtn.disabled = false;
-                            shareBtn.innerHTML = `<i class="fa-solid fa-satellite-dish"></i> 建立極短網址單次追蹤連結`;
-                            document.getElementById('status-dot').classList.add('active');
-                        } else {
-                            const shareBtn = document.getElementById('btn-share-trigger');
-                            shareBtn.disabled = true;
-                            shareBtn.innerHTML = `等待衛星精準對焦中 (目前精度: ${acc.toFixed(0)}m)`;
-                            document.getElementById('status-dot').classList.remove('active');
-                        }
-
-                        updateLocationOnMap(lat, lng, acc, `GPS 訊號收斂中 (精確度 ${acc.toFixed(0)}m)`);
-
-                        if (isBroadcasting && currentSessionId) {
-                            db.ref('sessions/' + currentSessionId).update({
-                                lat: lat,
-                                lng: lng,
-                                accuracy: acc,
-                                timestamp: Date.now()
-                            });
+                        // 僅在背景維持畫面更新
+                        if (!isBroadcasting) {
+                            updateLocationOnMap(lat, lng, acc, `GPS 定位中 (精確度 ${acc.toFixed(0)}m)`);
                         }
                     },
                     (error) => {
                         document.getElementById('status-text').innerText = '無法取得 GPS，請確認手機定位已開啟';
                     },
-                    { 
-                        enableHighAccuracy: true, 
-                        timeout: 5000, 
-                        maximumAge: 0 
-                    }
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
                 );
-
-                setInterval(() => {
-                    if (isBroadcasting && currentSessionId && currentPos) {
-                        db.ref('sessions/' + currentSessionId).update({
-                            lat: currentPos.lat,
-                            lng: currentPos.lng,
-                            timestamp: Date.now()
-                        });
-                    }
-                }, 3000);
             }
         }
 
+        // 【關鍵修正】點擊按鈕瞬間，強制執行一次高精度即時單次抓取，確保位置百分之百準確
         document.getElementById('btn-share-trigger').addEventListener('click', () => {
-            if (!hasValidGPS) {
-                alert('GPS 精度尚未達到 20 公尺以內，請移動至空曠處或稍候片刻！');
-                return;
+            document.getElementById('status-text').innerText = '正在強制取得精確衛星座標...';
+
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        const acc = position.coords.accuracy;
+
+                        currentPos = { lat, lng };
+                        updateLocationOnMap(lat, lng, acc, `已鎖定精確位置 (${acc.toFixed(0)}m)`);
+
+                        currentSessionId = generateShortCode(4);
+                        isBroadcasting = true;
+
+                        // 將最新抓到的精準座標寫入雲端
+                        db.ref('sessions/' + currentSessionId).set({
+                            lat: lat,
+                            lng: lng,
+                            accuracy: acc,
+                            timestamp: Date.now(),
+                            opened: false
+                        });
+
+                        // 啟動背景心跳同步，確保後續移動能即時跟著更新
+                        setInterval(() => {
+                            if (isBroadcasting && currentSessionId && currentPos) {
+                                db.ref('sessions/' + currentSessionId).update({
+                                    lat: currentPos.lat,
+                                    lng: currentPos.lng,
+                                    timestamp: Date.now()
+                                });
+                            }
+                        }, 3000);
+
+                        const baseUrl = window.location.href.split('#')[0];
+                        const fullShareUrl = `${baseUrl}#track=${currentSessionId}`;
+
+                        const urlInput = document.getElementById('share-url-input');
+                        urlInput.value = fullShareUrl;
+                        document.getElementById('share-modal').style.display = 'flex';
+                    },
+                    (error) => {
+                        alert('無法取得即時 GPS 座標，請檢查定位權限！');
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
             }
-
-            currentSessionId = generateShortCode(4);
-            isBroadcasting = true;
-
-            db.ref('sessions/' + currentSessionId).set({
-                lat: currentPos.lat,
-                lng: currentPos.lng,
-                accuracy: 30,
-                timestamp: Date.now(),
-                opened: false
-            });
-
-            const baseUrl = window.location.href.split('#')[0];
-            const fullShareUrl = `${baseUrl}#track=${currentSessionId}`;
-
-            const urlInput = document.getElementById('share-url-input');
-            urlInput.value = fullShareUrl;
-            document.getElementById('share-modal').style.display = 'flex';
         });
 
         document.getElementById('btn-copy-action').addEventListener('click', () => {
