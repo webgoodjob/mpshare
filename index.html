@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CYBER TRACK - 即時高精度追蹤</title>
+    <title>CYBER TRACK - 強制即時定位追蹤</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- Font Awesome Icons -->
@@ -338,6 +338,7 @@
             return false;
         }
 
+        // 背景監聽
         function startHostGPS() {
             if ("geolocation" in navigator) {
                 navigator.geolocation.watchPosition(
@@ -345,23 +346,19 @@
                         const lat = position.coords.latitude;
                         const lng = position.coords.longitude;
                         const acc = position.coords.accuracy;
-
-                        // 僅在背景維持畫面更新
                         if (!isBroadcasting) {
                             updateLocationOnMap(lat, lng, acc, `GPS 定位中 (精確度 ${acc.toFixed(0)}m)`);
                         }
                     },
-                    (error) => {
-                        document.getElementById('status-text').innerText = '無法取得 GPS，請確認手機定位已開啟';
-                    },
+                    (error) => {},
                     { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
                 );
             }
         }
 
-        // 【關鍵修正】點擊按鈕瞬間，強制執行一次高精度即時單次抓取，確保位置百分之百準確
+        // 點擊按鈕瞬間：強制放棄所有舊快取，向手機晶片要求最新坐標
         document.getElementById('btn-share-trigger').addEventListener('click', () => {
-            document.getElementById('status-text').innerText = '正在強制取得精確衛星座標...';
+            document.getElementById('status-text').innerText = '正在向硬體強制請求最新衛星坐標...';
 
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
@@ -371,12 +368,12 @@
                         const acc = position.coords.accuracy;
 
                         currentPos = { lat, lng };
-                        updateLocationOnMap(lat, lng, acc, `已鎖定精確位置 (${acc.toFixed(0)}m)`);
+                        updateLocationOnMap(lat, lng, acc, `已成功抓取最新坐標 (${acc.toFixed(0)}m)`);
 
                         currentSessionId = generateShortCode(4);
                         isBroadcasting = true;
 
-                        // 將最新抓到的精準座標寫入雲端
+                        // 寫入雲端
                         db.ref('sessions/' + currentSessionId).set({
                             lat: lat,
                             lng: lng,
@@ -385,7 +382,7 @@
                             opened: false
                         });
 
-                        // 啟動背景心跳同步，確保後續移動能即時跟著更新
+                        // 每 2 秒強制上傳目前最新坐標
                         setInterval(() => {
                             if (isBroadcasting && currentSessionId && currentPos) {
                                 db.ref('sessions/' + currentSessionId).update({
@@ -394,7 +391,7 @@
                                     timestamp: Date.now()
                                 });
                             }
-                        }, 3000);
+                        }, 2000);
 
                         const baseUrl = window.location.href.split('#')[0];
                         const fullShareUrl = `${baseUrl}#track=${currentSessionId}`;
@@ -404,9 +401,9 @@
                         document.getElementById('share-modal').style.display = 'flex';
                     },
                     (error) => {
-                        alert('無法取得即時 GPS 座標，請檢查定位權限！');
+                        alert('無法取得 GPS 坐標，請檢查手機瀏覽器定位權限是否允許！');
                     },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
                 );
             }
         });
@@ -418,10 +415,10 @@
 
             try {
                 navigator.clipboard.writeText(urlInput.value);
-                alert('極短追蹤連結已成功複製！');
+                alert('連結已成功複製！');
             } catch (err) {
                 document.execCommand('copy');
-                alert('極短追蹤連結已成功複製！');
+                alert('連結已成功複製！');
             }
         });
 
