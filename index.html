@@ -273,6 +273,7 @@
         function initMap(lat, lng) {
             if (map) {
                 map.setView([lat, lng], 17);
+                setTimeout(() => map.invalidateSize(), 100);
                 return;
             }
 
@@ -294,10 +295,10 @@
             userMarker = L.marker([lat, lng], { icon: pulseIcon }).addTo(map);
             accuracyCircle = L.circle([lat, lng], { radius: 25, color: '#00f2fe', fillColor: '#00f2fe', fillOpacity: 0.15 }).addTo(map);
 
-            // 確保手機瀏覽器容器渲染正常，防止黑畫面
+            // 【關鍵修正】強制重繪地圖尺寸，徹底解決手機瀏覽器黑畫面
             setTimeout(() => {
                 map.invalidateSize();
-            }, 200);
+            }, 250);
         }
 
         function updateLocationOnMap(lat, lng, accuracy = 30, statusMsg = "") {
@@ -309,6 +310,7 @@
                 accuracyCircle.setLatLng([lat, lng]);
                 accuracyCircle.setRadius(accuracy);
                 map.panTo([lat, lng], { animate: true, duration: 0.8 });
+                map.invalidateSize();
             }
             if (statusMsg) {
                 document.getElementById('status-text').innerText = statusMsg;
@@ -323,7 +325,7 @@
                 const openedRef = db.ref('sessions/' + sessionId + '/opened');
                 const sessionRef = db.ref('sessions/' + sessionId);
 
-                // 先行初始化地圖預設中心點，避免等待雲端時一片黑
+                // 先行以預設中心點初始化地圖，避免黑畫面
                 initMap(24.1477, 120.6736);
 
                 openedRef.transaction((currentVal) => {
@@ -343,7 +345,7 @@
                             const data = snap.val();
                             if (data && data.lat && data.lng) {
                                 const timeStr = new Date(data.timestamp).toLocaleTimeString();
-                                updateLocationOnMap(data.data?.lat || data.lat, data.data?.lng || data.lng, data.accuracy || 30, `即時動態追蹤中 (${timeStr})`);
+                                updateLocationOnMap(data.lat, data.lng, data.accuracy || 30, `即時動態追蹤中 (${timeStr})`);
                             }
                         });
                     } else {
