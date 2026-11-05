@@ -271,6 +271,11 @@
         }
 
         function initMap(lat, lng) {
+            if (map) {
+                map.setView([lat, lng], 17);
+                return;
+            }
+
             map = L.map('map', { zoomControl: false }).setView([lat, lng], 17);
 
             L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -288,16 +293,21 @@
 
             userMarker = L.marker([lat, lng], { icon: pulseIcon }).addTo(map);
             accuracyCircle = L.circle([lat, lng], { radius: 25, color: '#00f2fe', fillColor: '#00f2fe', fillOpacity: 0.15 }).addTo(map);
+
+            // 確保手機瀏覽器容器渲染正常，防止黑畫面
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 200);
         }
 
-        // 優化後的平滑移動更新
         function updateLocationOnMap(lat, lng, accuracy = 30, statusMsg = "") {
             currentPos = { lat, lng };
-            if (userMarker && accuracyCircle && map) {
+            if (!map) {
+                initMap(lat, lng);
+            } else {
                 userMarker.setLatLng([lat, lng]);
                 accuracyCircle.setLatLng([lat, lng]);
                 accuracyCircle.setRadius(accuracy);
-                // 平滑跟隨移動
                 map.panTo([lat, lng], { animate: true, duration: 0.8 });
             }
             if (statusMsg) {
@@ -313,6 +323,9 @@
                 const openedRef = db.ref('sessions/' + sessionId + '/opened');
                 const sessionRef = db.ref('sessions/' + sessionId);
 
+                // 先行初始化地圖預設中心點，避免等待雲端時一片黑
+                initMap(24.1477, 120.6736);
+
                 openedRef.transaction((currentVal) => {
                     if (currentVal === false || currentVal === null) {
                         return true;
@@ -325,23 +338,12 @@
                         document.getElementById('mode-badge').innerText = '即時追蹤中';
                         document.getElementById('status-text').innerText = '連線成功，正在接收實時坐標...';
 
-                        // 第一次抓取中心點初始化地圖
-                        sessionRef.once('value', (snap) => {
-                            const data = snap.val();
-                            if (data && data.lat && data.lng) {
-                                initMap(data.lat, data.lng);
-                                updateLocationOnMap(data.lat, data.lng, data.accuracy || 30, '即時同步追蹤中');
-                            } else {
-                                initMap(24.1477, 120.6736);
-                            }
-                        });
-
-                        // 持續監聽雲端，隨時更新位置
+                        // 監聽雲端，隨時更新位置
                         sessionRef.on('value', (snap) => {
                             const data = snap.val();
                             if (data && data.lat && data.lng) {
                                 const timeStr = new Date(data.timestamp).toLocaleTimeString();
-                                updateLocationOnMap(data.lat, data.lng, data.accuracy || 30, `即時動態追蹤中 (${timeStr})`);
+                                updateLocationOnMap(data.data?.lat || data.lat, data.data?.lng || data.lng, data.accuracy || 30, `即時動態追蹤中 (${timeStr})`);
                             }
                         });
                     } else {
@@ -369,7 +371,6 @@
                         initMap(lat, lng);
                         updateLocationOnMap(lat, lng, acc, `GPS 已定位 (${acc.toFixed(0)}m)`);
 
-                        // 高頻率監聽自身移動
                         navigator.geolocation.watchPosition(
                             (pos) => {
                                 const newLat = pos.coords.latitude;
@@ -412,7 +413,6 @@
             currentSessionId = generateShortCode(4);
             isBroadcasting = true;
 
-            // 寫入初始位置
             db.ref('sessions/' + currentSessionId).set({
                 lat: currentPos.lat,
                 lng: currentPos.lng,
@@ -421,7 +421,6 @@
                 opened: false
             });
 
-            // 每 2 秒強制同步一次最新位置到雲端
             setInterval(() => {
                 if (isBroadcasting && currentSessionId && currentPos) {
                     db.ref('sessions/' + currentSessionId).update({
